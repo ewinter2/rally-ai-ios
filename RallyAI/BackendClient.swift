@@ -7,13 +7,6 @@
 
 import Foundation
 
-//Given some input text, call the backend and return a parsed result
-
-struct ParseTextRequest: Codable {
-    let text: String
-    let setNumber: Int
-}
-
 //defines errors that occur during backend communication
 enum BackendError: Error, LocalizedError {
     case badResponse(statusCode:Int)
