@@ -9,10 +9,11 @@ import Combine
 
 @MainActor //ensures any changes to @published properties happen safely on the main thread
 final class TrackingViewModel: ObservableObject { //ensures swift auto refreshes
-    @Published var inputText: String = "12 kill" //change to empty later
+    @Published var inputText: String = "" //change to empty later
     @Published var isLoading: Bool = false //drives UI loading state
-    @Published var lastEvent: Event?
     @Published var errorMessage: String? //stores readable message in case of an error
+    
+    @Published private(set) var gameState: GameState = GameState()
     
     private let backend: BackendClientProtocol
     
@@ -23,22 +24,62 @@ final class TrackingViewModel: ObservableObject { //ensures swift auto refreshes
         self.backend = backend
     }
     
+    var currentSetNumber: Int { gameState.currentSetNumber }
+    var score: Score { gameState.score }
+    
+    var eventsForCurrentSet: [RallyEvent] {
+        gameState.events
+            .filter { $0.setNumber == gameState.currentSetNumber }
+            .sorted {$0.createdAt < $1.createdAt }
+    }
+    
     func sendTextCommand() async {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
         isLoading = true
         errorMessage = nil
-        lastEvent = nil
         
         do {
-            let backendEvent = try await backend.parseText(trimmed, setNumber: setNumber)
-            lastEvent = Event.fromBackend(backendEvent, setNumber: setNumber)
+            let backendEvent = try await backend.parseText(trimmed, setNumber: gameState.currentSetNumber)
+            let event = RallyEvent.fromBackend(backendEvent, setNumber: gameState.currentSetNumber)
+            gameState.apply(.addEvent(event))
+            inputText = ""
         } catch {
             errorMessage = error.localizedDescription
         }
         
         isLoading = false
+    }
+    
+    func deleteEvent(id: UUID) {
+        gameState.apply(.deleteEvent(id))
+    }
+    
+    func reparseAndReplaceEvent(id: UUID, newRawText: String) async {
+        let trimmed = newRawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let backendEvent = try await backend.parseText(trimmed, setNumber: gameState.currentSetNumber)
+            let newEvent = RallyEvent.fromBackend(backendEvent, setNumber: gameState.currentSetNumber, id: id)
+            gameState.apply(.replaceEvent(id, with: newEvent))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+    func startNewSet() {
+        gameState.apply(.startNewSet)
+    }
+    
+    func manualScore(us: Int, them: Int) {
+        gameState.apply(.manualScore(us: us, them: them))
     }
 }
 
