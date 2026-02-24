@@ -10,6 +10,7 @@ import Foundation
 struct RallyEvent: Identifiable, Codable, Equatable {
     let id: UUID
     let createdAt: Date
+    let commandID: UUID?
     
     let setNumber: Int
     let playerNumber: Int?
@@ -19,17 +20,21 @@ struct RallyEvent: Identifiable, Codable, Equatable {
     let rawText: String
     
     static func fromBackend(
-        _ backend: BackendParsedEvent, //DTO's are unstable and the domain should not depend on backend naming and structure
+        _ backend: BackendParsedEvent,
         setNumber: Int,
         id: UUID = UUID(),
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        commandID: UUID? = nil
     ) -> RallyEvent {
-        let action = Action(rawValue: backend.event) ?? .unknown
-        let side = backend.pointAwardedTo.flatMap{ TeamSide(rawValue: $0)}
+        let action = Action(rawValue: backend.event.uppercased()) ?? .unknown
+        let side = backend.pointAwardedTo
+            .map { $0.lowercased() }
+            .flatMap { TeamSide(rawValue: $0) }
         
         return RallyEvent(
             id: id,
             createdAt: createdAt,
+            commandID: commandID,
             setNumber: setNumber,
             playerNumber: backend.playerNumber,
             action: action,

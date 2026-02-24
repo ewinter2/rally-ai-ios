@@ -34,6 +34,7 @@ struct GameState: Codable, Equatable {
                 events[idx] = RallyEvent(
                     id: old.id,
                     createdAt: old.createdAt,
+                    commandID: old.commandID,
                     setNumber: newEvent.setNumber,
                     playerNumber: newEvent.playerNumber,
                     action: newEvent.action,
