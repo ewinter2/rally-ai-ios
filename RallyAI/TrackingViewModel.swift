@@ -86,6 +86,17 @@ final class TrackingViewModel: ObservableObject {
         Task { await persistState() }
     }
 
+    func removeCommand(id: UUID) {
+        guard let index = commandQueue.firstIndex(where: { $0.id == id }) else { return }
+        let command = commandQueue.remove(at: index)
+
+        if let linkedEvent = gameState.events.first(where: { $0.commandID == command.id }) {
+            gameState.apply(.deleteEvent(linkedEvent.id))
+        }
+
+        Task { await persistState() }
+    }
+
     func reparseAndReplaceEvent(id: UUID, newRawText: String) async {
         let trimmed = newRawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
