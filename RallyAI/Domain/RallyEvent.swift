@@ -15,6 +15,7 @@ struct RallyEvent: Identifiable, Codable, Equatable {
     let setNumber: Int
     let playerNumber: Int?
     let action: Action
+    let backendEventRaw: String
     let pointAwardedTo: TeamSide?
     let needsReview: Bool
     let rawText: String
@@ -38,6 +39,7 @@ struct RallyEvent: Identifiable, Codable, Equatable {
             setNumber: setNumber,
             playerNumber: backend.playerNumber,
             action: action,
+            backendEventRaw: backend.event,
             pointAwardedTo: side,
             needsReview: backend.needsReview,
             rawText: backend.rawText

@@ -76,12 +76,6 @@ struct BackendTestView: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
-
-                                Button("Accept + Commit") {
-                                    vm.acceptReviewedCommand(command.id)
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.orange)
                             }
                         }
                     }
@@ -135,7 +129,7 @@ struct BackendTestView: View {
                                 Text(event.rawText)
                                     .foregroundStyle(event.needsReview ? .red : .primary)
 
-                                Text("P: \(event.playerNumber.map(String.init) ?? "nil") • \(event.action.rawValue) • Point: \(event.pointAwardedTo?.rawValue ?? "nil")")
+                                Text("P: \(event.playerNumber.map(String.init) ?? "nil") • Mapped: \(event.action.rawValue) • Raw: \(event.backendEventRaw) • Point: \(event.pointAwardedTo?.rawValue ?? "nil")")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

@@ -38,6 +38,7 @@ struct GameState: Codable, Equatable {
                     setNumber: newEvent.setNumber,
                     playerNumber: newEvent.playerNumber,
                     action: newEvent.action,
+                    backendEventRaw: newEvent.backendEventRaw,
                     pointAwardedTo: newEvent.pointAwardedTo,
                     needsReview: newEvent.needsReview,
                     rawText: newEvent.rawText
