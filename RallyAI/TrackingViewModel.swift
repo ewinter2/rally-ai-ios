@@ -110,7 +110,12 @@ final class TrackingViewModel: ObservableObject {
         }
 
         do {
-            let backendEvent = try await backend.parseText(trimmed, setNumber: gameState.currentSetNumber)
+            let backendEvent = try await backend.parseText(
+                trimmed,
+                setNumber: gameState.currentSetNumber,
+                teamID: gameState.teamID,
+                matchID: gameState.matchID
+            )
             let newEvent = RallyEvent.fromBackend(
                 backendEvent,
                 teamID: gameState.teamID,
@@ -167,7 +172,12 @@ final class TrackingViewModel: ObservableObject {
 
         do {
             let setNumber = commandQueue[index].setNumber
-            let parsed = try await backend.parseText(rawText, setNumber: setNumber)
+            let parsed = try await backend.parseText(
+                rawText,
+                setNumber: setNumber,
+                teamID: commandQueue[index].teamID,
+                matchID: commandQueue[index].matchID
+            )
             commandQueue[index].parsedEvent = parsed
             commandQueue[index].errorMessage = nil
 

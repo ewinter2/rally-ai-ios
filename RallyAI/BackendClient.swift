@@ -21,7 +21,7 @@ enum BackendError: Error, LocalizedError {
 }
 
 protocol BackendClientProtocol {
-    func parseText(_ text: String, setNumber: Int) async throws -> BackendParsedEvent
+    func parseText(_ text: String, setNumber: Int, teamID: UUID, matchID: UUID) async throws -> BackendParsedEvent
 }
 
 final class BackendClient: BackendClientProtocol {
@@ -33,7 +33,7 @@ final class BackendClient: BackendClientProtocol {
         self.baseURL = baseURL
     }
     
-    func parseText(_ text: String, setNumber: Int) async throws -> BackendParsedEvent {
+    func parseText(_ text: String, setNumber: Int, teamID: UUID, matchID: UUID) async throws -> BackendParsedEvent {
         let url = baseURL.appendingPathComponent("parse-text")
         
         var request = URLRequest(url: url)
@@ -41,7 +41,12 @@ final class BackendClient: BackendClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type") //Telling the server the body is JSON
         
         // Create a swift struct, convert it to JSON, attach to request
-        let body = ParseTextRequest(text: text, setNumber: setNumber)
+        let body = ParseTextRequest(
+            text: text,
+            setNumber: setNumber,
+            teamId: teamID,
+            matchId: matchID
+        )
         request.httpBody = try JSONEncoder().encode(body)
         
         //App send request over the network and retrives raw data and HTTP response metadata
@@ -68,4 +73,3 @@ final class BackendClient: BackendClientProtocol {
         return parsed
     }
 }
-

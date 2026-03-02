@@ -84,15 +84,18 @@ struct RallyEvent: Identifiable, Codable, Equatable {
         let side = backend.pointAwardedTo
             .map { $0.lowercased() }
             .flatMap { TeamSide(rawValue: $0) }
+        let resolvedTeamID = backend.teamId ?? teamID
+        let resolvedMatchID = backend.matchId ?? matchID
+        let resolvedPlayerID = backend.playerId ?? playerID
         
         return RallyEvent(
             id: id,
             createdAt: createdAt,
             commandID: commandID,
-            teamID: teamID,
-            matchID: matchID,
+            teamID: resolvedTeamID,
+            matchID: resolvedMatchID,
             setNumber: setNumber,
-            playerID: playerID,
+            playerID: resolvedPlayerID,
             playerNumber: backend.playerNumber,
             action: action,
             backendEventRaw: backend.event,

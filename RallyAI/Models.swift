@@ -12,6 +12,8 @@ import Foundation
 struct ParseTextRequest: Codable, Equatable {
     let text: String
     let setNumber: Int?
+    let teamId: UUID?
+    let matchId: UUID?
 }
 
 // Mirrors the backend response
@@ -21,6 +23,9 @@ struct BackendParsedEvent: Codable, Equatable {
     let pointAwardedTo: String?
     let needsReview: Bool
     let rawText: String
+    let playerId: UUID?
+    let teamId: UUID?
+    let matchId: UUID?
 }
 
 enum TeamSide: String, Codable {
