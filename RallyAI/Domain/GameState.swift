@@ -13,10 +13,35 @@ struct Score: Codable, Equatable {
 }
 
 struct GameState: Codable, Equatable {
+    var teamID: UUID = UUID()
+    var matchID: UUID = UUID()
     var currentSetNumber: Int = 1
     var events: [RallyEvent] = []
     
     var score = Score()
+
+    init(
+        teamID: UUID = UUID(),
+        matchID: UUID = UUID(),
+        currentSetNumber: Int = 1,
+        events: [RallyEvent] = [],
+        score: Score = Score()
+    ) {
+        self.teamID = teamID
+        self.matchID = matchID
+        self.currentSetNumber = currentSetNumber
+        self.events = events
+        self.score = score
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        teamID = try container.decodeIfPresent(UUID.self, forKey: .teamID) ?? UUID()
+        matchID = try container.decodeIfPresent(UUID.self, forKey: .matchID) ?? UUID()
+        currentSetNumber = try container.decodeIfPresent(Int.self, forKey: .currentSetNumber) ?? 1
+        events = try container.decodeIfPresent([RallyEvent].self, forKey: .events) ?? []
+        score = try container.decodeIfPresent(Score.self, forKey: .score) ?? Score()
+    }
     
     mutating func apply(_ action: GameAction) {
         switch action {
@@ -35,7 +60,10 @@ struct GameState: Codable, Equatable {
                     id: old.id,
                     createdAt: old.createdAt,
                     commandID: old.commandID,
+                    teamID: old.teamID,
+                    matchID: old.matchID,
                     setNumber: newEvent.setNumber,
+                    playerID: old.playerID ?? newEvent.playerID,
                     playerNumber: newEvent.playerNumber,
                     action: newEvent.action,
                     backendEventRaw: newEvent.backendEventRaw,

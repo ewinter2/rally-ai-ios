@@ -69,15 +69,77 @@ enum CommandStatus: String, Codable {
 struct CommandInput: Identifiable, Codable, Equatable {
     let id: UUID
     let createdAt: Date
+    let teamID: UUID
+    let matchID: UUID
     let source: CommandSource
     let setNumber: Int
     var rawText: String
     var status: CommandStatus
     var parsedEvent: BackendParsedEvent?
     var errorMessage: String?
+
+    init(
+        id: UUID,
+        createdAt: Date,
+        teamID: UUID,
+        matchID: UUID,
+        source: CommandSource,
+        setNumber: Int,
+        rawText: String,
+        status: CommandStatus,
+        parsedEvent: BackendParsedEvent?,
+        errorMessage: String?
+    ) {
+        self.id = id
+        self.createdAt = createdAt
+        self.teamID = teamID
+        self.matchID = matchID
+        self.source = source
+        self.setNumber = setNumber
+        self.rawText = rawText
+        self.status = status
+        self.parsedEvent = parsedEvent
+        self.errorMessage = errorMessage
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        teamID = try container.decodeIfPresent(UUID.self, forKey: .teamID) ?? UUID()
+        matchID = try container.decodeIfPresent(UUID.self, forKey: .matchID) ?? UUID()
+        source = try container.decode(CommandSource.self, forKey: .source)
+        setNumber = try container.decode(Int.self, forKey: .setNumber)
+        rawText = try container.decode(String.self, forKey: .rawText)
+        status = try container.decode(CommandStatus.self, forKey: .status)
+        parsedEvent = try container.decodeIfPresent(BackendParsedEvent.self, forKey: .parsedEvent)
+        errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
+    }
 }
 
 struct PersistedAppState: Codable {
     let gameState: GameState
     let commandQueue: [CommandInput]
+}
+
+// Roster and match entities use stable UUID identity.
+// Jersey number remains editable and is not the primary key.
+struct Team: Identifiable, Codable, Equatable {
+    let id: UUID
+    var name: String
+}
+
+struct Match: Identifiable, Codable, Equatable {
+    let id: UUID
+    let teamID: UUID
+    var opponentName: String
+    var startedAt: Date
+}
+
+struct Player: Identifiable, Codable, Equatable {
+    let id: UUID
+    var jerseyNumber: Int
+    var displayName: String
+    var primaryPosition: String
+    var isOnCourt: Bool
 }

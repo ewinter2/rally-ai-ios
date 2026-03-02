@@ -111,7 +111,12 @@ final class TrackingViewModel: ObservableObject {
 
         do {
             let backendEvent = try await backend.parseText(trimmed, setNumber: gameState.currentSetNumber)
-            let newEvent = RallyEvent.fromBackend(backendEvent, setNumber: gameState.currentSetNumber)
+            let newEvent = RallyEvent.fromBackend(
+                backendEvent,
+                teamID: gameState.teamID,
+                matchID: gameState.matchID,
+                setNumber: gameState.currentSetNumber
+            )
             gameState.apply(.replaceEvent(id, with: newEvent))
         } catch {
             errorMessage = error.localizedDescription
@@ -132,6 +137,8 @@ final class TrackingViewModel: ObservableObject {
         let command = CommandInput(
             id: UUID(),
             createdAt: Date(),
+            teamID: gameState.teamID,
+            matchID: gameState.matchID,
             source: source,
             setNumber: gameState.currentSetNumber,
             rawText: text,
@@ -183,6 +190,8 @@ final class TrackingViewModel: ObservableObject {
         let command = commandQueue[index]
         let event = RallyEvent.fromBackend(
             parsed,
+            teamID: command.teamID,
+            matchID: command.matchID,
             setNumber: command.setNumber,
             commandID: command.id
         )
