@@ -141,10 +141,86 @@ struct Match: Identifiable, Codable, Equatable {
     var startedAt: Date
 }
 
+enum PlayerPosition: String, Codable, CaseIterable, Identifiable {
+    case setter = "S"
+    case outsideHitter = "OH"
+    case middleBlocker = "M"
+    case opposite = "OPP"
+    case libero = "L"
+    case defensiveSpecialist = "DS"
+
+    var id: String { rawValue }
+}
+
 struct Player: Identifiable, Codable, Equatable {
     let id: UUID
     var jerseyNumber: Int
+    var firstName: String
+    var lastName: String
     var displayName: String
-    var primaryPosition: String
+    var positions: [PlayerPosition]
+    var isActive: Bool
+}
+
+struct MatchRosterEntry: Identifiable, Codable, Equatable {
+    let id: UUID
+    let matchID: UUID
+    let playerID: UUID
+    var isAvailable: Bool
+    var isStarter: Bool
+}
+
+struct LineupSlot: Identifiable, Codable, Equatable {
+    let id: UUID
+    let matchID: UUID
+    let setNumber: Int
+    var rotationIndex: Int
+    var playerID: UUID?
+    var isLiberoSlot: Bool
+
+    var hasValidRotationIndex: Bool {
+        (1...6).contains(rotationIndex)
+    }
+}
+
+struct PlayerMatchState: Identifiable, Codable, Equatable {
+    let id: UUID
+    let matchID: UUID
+    let playerID: UUID
     var isOnCourt: Bool
+    var isLibero: Bool
+    var enteredAt: Date?
+    var exitedAt: Date?
+    var currentRotationIndex: Int?
+}
+
+struct RosterState: Codable, Equatable {
+    var players: [Player] = []
+    var matchRosterEntries: [MatchRosterEntry] = []
+    var lineupSlots: [LineupSlot] = []
+    var playerMatchStates: [PlayerMatchState] = []
+
+    func playerByID(_ id: UUID) -> Player? {
+        players.first(where: { $0.id == id })
+    }
+
+    func playerByJerseyNumber(_ jerseyNumber: Int) -> Player? {
+        players.first(where: { $0.jerseyNumber == jerseyNumber })
+    }
+
+    func onCourtPlayers(matchID: UUID) -> [Player] {
+        let onCourtIDs = Set(
+            playerMatchStates
+                .filter { $0.matchID == matchID && $0.isOnCourt }
+                .map(\.playerID)
+        )
+
+        return players.filter { onCourtIDs.contains($0.id) }
+    }
+
+    func currentLineup(matchID: UUID, setNumber: Int) -> [LineupSlot] {
+        lineupSlots
+            .filter { $0.matchID == matchID && $0.setNumber == setNumber }
+            .sorted { $0.rotationIndex < $1.rotationIndex }
+    }
 }

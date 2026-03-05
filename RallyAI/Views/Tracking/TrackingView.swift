@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TrackingView: View {
-    @StateObject private var vm = TrackingViewModel()
+    @EnvironmentObject private var vm: TrackingViewModel
     @State private var isComposerVisible = false
     @State private var draftCommand = ""
     @FocusState private var isCommandFieldFocused: Bool
@@ -229,4 +229,5 @@ struct TrackingView: View {
 
 #Preview {
     TrackingView()
+        .environmentObject(TrackingViewModel())
 }

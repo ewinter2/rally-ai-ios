@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @StateObject private var vm = TrackingViewModel()
+
     var body: some View {
         TabView {
             TrackingView()
@@ -18,6 +20,7 @@ struct MainTabView: View {
                     Label("Roster", systemImage: "tshirt")
                 }
         }
+        .environmentObject(vm)
     }
 }
 

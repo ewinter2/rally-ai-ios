@@ -15,6 +15,7 @@ final class TrackingViewModel: ObservableObject {
 
     @Published private(set) var gameState: GameState = GameState()
     @Published private(set) var commandQueue: [CommandInput] = []
+    @Published var rosterState: RosterState = RosterState()
 
     private let backend: BackendClientProtocol
     private let stateStore: LocalStateStoreProtocol
@@ -198,11 +199,15 @@ final class TrackingViewModel: ObservableObject {
         guard commandQueue.indices.contains(index) else { return }
 
         let command = commandQueue[index]
+        let resolvedPlayerID = parsed.playerId
+            ?? parsed.playerNumber.flatMap { rosterState.playerByJerseyNumber($0)?.id }
+
         let event = RallyEvent.fromBackend(
             parsed,
             teamID: command.teamID,
             matchID: command.matchID,
             setNumber: command.setNumber,
+            playerID: resolvedPlayerID,
             commandID: command.id
         )
 
