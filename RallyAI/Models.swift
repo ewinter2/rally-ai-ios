@@ -125,6 +125,20 @@ struct CommandInput: Identifiable, Codable, Equatable {
 struct PersistedAppState: Codable {
     let gameState: GameState
     let commandQueue: [CommandInput]
+    let inGameState: InGameState
+
+    init(gameState: GameState, commandQueue: [CommandInput], inGameState: InGameState) {
+        self.gameState = gameState
+        self.commandQueue = commandQueue
+        self.inGameState = inGameState
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        gameState = try container.decode(GameState.self, forKey: .gameState)
+        commandQueue = try container.decodeIfPresent([CommandInput].self, forKey: .commandQueue) ?? []
+        inGameState = try container.decodeIfPresent(InGameState.self, forKey: .inGameState) ?? InGameState()
+    }
 }
 
 // Roster and match entities use stable UUID identity.
@@ -192,6 +206,7 @@ struct PlayerMatchState: Identifiable, Codable, Equatable {
     var enteredAt: Date?
     var exitedAt: Date?
     var currentRotationIndex: Int?
+    var availableForSubstitution: Bool
 }
 
 struct RosterState: Codable, Equatable {

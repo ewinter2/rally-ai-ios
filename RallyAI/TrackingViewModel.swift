@@ -15,6 +15,7 @@ final class TrackingViewModel: ObservableObject {
 
     @Published private(set) var gameState: GameState = GameState()
     @Published private(set) var commandQueue: [CommandInput] = []
+    @Published private(set) var inGameState: InGameState = InGameState()
     @Published var rosterState: RosterState = RosterState()
 
     private let backend: BackendClientProtocol
@@ -27,6 +28,7 @@ final class TrackingViewModel: ObservableObject {
     ) {
         self.backend = backend ?? BackendClient()
         self.stateStore = stateStore ?? LocalStateStore()
+        inGameState.ensureSet(matchID: gameState.matchID, setNumber: gameState.currentSetNumber)
 
         if restoreOnInit {
             Task { await restoreState() }
@@ -131,7 +133,52 @@ final class TrackingViewModel: ObservableObject {
 
     func startNewSet() {
         gameState.apply(.startNewSet)
+        inGameState.ensureSet(matchID: gameState.matchID, setNumber: gameState.currentSetNumber)
         Task { await persistState() }
+    }
+
+    func configureStartingLineupForCurrentSet(_ lineupByRotation: [Int: UUID]) throws {
+        try inGameState.configureStartingLineup(
+            matchID: gameState.matchID,
+            setNumber: gameState.currentSetNumber,
+            lineupByRotation: lineupByRotation
+        )
+        Task { await persistState() }
+    }
+
+    func applySubstitution(
+        playerInID: UUID,
+        playerOutID: UUID,
+        rotationIndex: Int,
+        allowOverride: Bool = false
+    ) throws {
+        try inGameState.applySubstitution(
+            matchID: gameState.matchID,
+            setNumber: gameState.currentSetNumber,
+            playerInID: playerInID,
+            playerOutID: playerOutID,
+            rotationIndex: rotationIndex,
+            allowOverride: allowOverride
+        )
+        Task { await persistState() }
+    }
+
+    func overrideSubstitutionMessage(
+        playerInID: UUID,
+        playerOutID: UUID
+    ) -> String {
+        let incomingName = rosterState.playerByID(playerInID)?.displayName ?? "this player"
+        let outgoingName = rosterState.playerByID(playerOutID)?.displayName ?? "this player"
+
+        let priorStarterID = inGameState.previousStarterForSub(
+            setNumber: gameState.currentSetNumber,
+            playerID: playerInID
+        )
+        let priorStarterName = priorStarterID
+            .flatMap { rosterState.playerByID($0)?.displayName }
+            ?? "another player"
+
+        return "Are you sure you want to override and sub \(incomingName) for \(outgoingName)? \(incomingName) already substituted for \(priorStarterName) this set."
     }
 
     func manualScore(us: Int, them: Int) {
@@ -220,7 +267,9 @@ final class TrackingViewModel: ObservableObject {
             if let restored = try await stateStore.load() {
                 gameState = restored.gameState
                 commandQueue = restored.commandQueue
+                inGameState = restored.inGameState
             }
+            inGameState.ensureSet(matchID: gameState.matchID, setNumber: gameState.currentSetNumber)
         } catch {
             errorMessage = "Failed to restore local state: \(error.localizedDescription)"
         }
@@ -228,7 +277,11 @@ final class TrackingViewModel: ObservableObject {
 
     private func persistState() async {
         do {
-            let state = PersistedAppState(gameState: gameState, commandQueue: commandQueue)
+            let state = PersistedAppState(
+                gameState: gameState,
+                commandQueue: commandQueue,
+                inGameState: inGameState
+            )
             try await stateStore.save(state)
         } catch {
             errorMessage = "Failed to save local state: \(error.localizedDescription)"
