@@ -51,9 +51,15 @@ struct TrackingView: View {
         HStack(alignment: .center, spacing: 20) {
             scoreBox(label: "Us", value: vm.score.us, team: .us)
 
-            Text("Set \(vm.currentSetNumber)")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
+            VStack(spacing: 2) {
+                Text("Set \(vm.currentSetNumber)")
+                    .font(.headline)
+
+                Text("\(vm.setsWon.us) - \(vm.setsWon.them)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
 
             scoreBox(label: "Them", value: vm.score.them, team: .them)
         }

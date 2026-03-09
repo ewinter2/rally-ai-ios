@@ -121,4 +121,36 @@ struct GameState: Codable, Equatable {
         score.us = max(0, derived.us + currentSetScoreAdjustment.us)
         score.them = max(0, derived.them + currentSetScoreAdjustment.them)
     }
+
+    func derivedScore(forSet setNumber: Int) -> Score {
+        var derived = Score()
+        let setEvents = events.filter { $0.setNumber == setNumber }
+
+        for event in setEvents {
+            guard let side = event.pointAwardedTo else { continue }
+            if side == .us {
+                derived.us += 1
+            } else {
+                derived.them += 1
+            }
+        }
+
+        return derived
+    }
+
+    func setsWonBeforeCurrentSet() -> Score {
+        guard currentSetNumber > 1 else { return Score() }
+
+        var wins = Score()
+        for set in 1..<currentSetNumber {
+            let setScore = derivedScore(forSet: set)
+            if setScore.us > setScore.them {
+                wins.us += 1
+            } else if setScore.them > setScore.us {
+                wins.them += 1
+            }
+        }
+
+        return wins
+    }
 }

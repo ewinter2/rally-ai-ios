@@ -37,6 +37,7 @@ final class TrackingViewModel: ObservableObject {
 
     var currentSetNumber: Int { gameState.currentSetNumber }
     var score: Score { gameState.score }
+    var setsWon: Score { gameState.setsWonBeforeCurrentSet() }
 
     var eventsForCurrentSet: [RallyEvent] {
         gameState.events
