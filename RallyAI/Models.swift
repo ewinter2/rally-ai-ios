@@ -11,7 +11,7 @@ import Foundation
 // Codable allows easy conversion of data to and from JSON data
 struct ParseTextRequest: Codable, Equatable {
     let text: String
-    let setNumber: Int?
+    let setNumber: Int
     let teamId: UUID?
     let matchId: UUID?
 }

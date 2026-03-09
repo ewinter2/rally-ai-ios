@@ -64,16 +64,6 @@ final class TrackingViewModel: ObservableObject {
         inputText = ""
         await captureAndParseCommand(text: trimmed, source: .text)
     }
-
-    func acceptReviewedCommand(_ id: UUID) {
-        guard let index = commandQueue.firstIndex(where: { $0.id == id }) else { return }
-        guard let parsed = commandQueue[index].parsedEvent else { return }
-
-        commandQueue[index].status = .accepted
-        commitParsedEvent(parsed, forCommandAt: index)
-        Task { await persistState() }
-    }
-
     func retryCommand(_ id: UUID) async {
         guard let index = commandQueue.firstIndex(where: { $0.id == id }) else { return }
         let rawText = commandQueue[index].rawText
