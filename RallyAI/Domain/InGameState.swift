@@ -32,16 +32,6 @@ enum SubstitutionError: Error, LocalizedError, Equatable {
     }
 }
 
-struct SubstitutionLink: Identifiable, Codable, Equatable {
-    let id: UUID
-    let matchID: UUID
-    let setNumber: Int
-    let rotationIndex: Int
-    let originalStarterPlayerID: UUID
-    let pairedSubPlayerID: UUID
-    let createdAt: Date
-}
-
 struct SubEvent: Identifiable, Codable, Equatable {
     let id: UUID
     let matchID: UUID
@@ -56,7 +46,6 @@ struct SetSubstitutionState: Codable, Equatable {
     let matchID: UUID
     let setNumber: Int
     var lineupByRotation: [Int: UUID] = [:]
-    var substitutionLinks: [SubstitutionLink] = []
     // Per-set rotation lock: once a player appears in a rotation, they stay tied to it for that set.
     var playerRotationLocks: [UUID: Int] = [:]
     var substitutionHistory: [SubEvent] = []
@@ -166,18 +155,6 @@ struct SetSubstitutionState: Codable, Equatable {
 
         playerRotationLocks[playerInID] = rotationIndex
         playerRotationLocks[playerOutID] = rotationIndex
-        substitutionLinks.append(
-            SubstitutionLink(
-                id: UUID(),
-                matchID: matchID,
-                setNumber: setNumber,
-                rotationIndex: rotationIndex,
-                originalStarterPlayerID: playerOutID,
-                pairedSubPlayerID: playerInID,
-                createdAt: timestamp
-            )
-        )
-
         lineupByRotation[rotationIndex] = playerInID
 
         outgoing.isOnCourt = false
@@ -206,10 +183,10 @@ struct SetSubstitutionState: Codable, Equatable {
     }
 
     func previousStarterForSub(playerID: UUID) -> UUID? {
-        substitutionLinks
+        substitutionHistory
             .reversed()
-            .first(where: { $0.pairedSubPlayerID == playerID })?
-            .originalStarterPlayerID
+            .first(where: { $0.playerInID == playerID })?
+            .playerOutID
     }
 }
 
