@@ -49,17 +49,17 @@ struct TrackingView: View {
 
     private var scoreHeader: some View {
         HStack(alignment: .center, spacing: 20) {
-            scoreBox(label: "Us", value: vm.score.us)
+            scoreBox(label: "Us", value: vm.score.us, team: .us)
 
             Text("Set \(vm.currentSetNumber)")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
 
-            scoreBox(label: "Them", value: vm.score.them)
+            scoreBox(label: "Them", value: vm.score.them, team: .them)
         }
     }
 
-    private func scoreBox(label: String, value: Int) -> some View {
+    private func scoreBox(label: String, value: Int, team: TeamSide) -> some View {
         VStack(spacing: 2) {
             Text(label)
                 .font(.subheadline)
@@ -69,6 +69,21 @@ struct TrackingView: View {
         .frame(width: 84, height: 84)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 18)
+                .onEnded { drag in
+                    let vertical = drag.translation.height
+                    let horizontal = drag.translation.width
+
+                    guard abs(vertical) > abs(horizontal) else { return }
+
+                    if vertical <= -24 {
+                        vm.adjustScore(team: team, delta: 1)
+                    } else if vertical >= 24 {
+                        vm.adjustScore(team: team, delta: -1)
+                    }
+                }
+        )
     }
 
     private var emptyState: some View {
@@ -137,13 +152,45 @@ struct TrackingView: View {
             isComposerVisible = true
             isCommandFieldFocused = true
         } label: {
-            Image(systemName: "mic.fill")
-                .font(.system(size: 36))
-                .foregroundStyle(.white)
-                .frame(width: 76, height: 76)
-                .background(Color.blue)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.16), radius: 6, x: 0, y: 3)
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        Circle()
+                            .fill(Color.blue.opacity(0.34))
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.62), lineWidth: 1)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.blue.opacity(0.32), lineWidth: 2)
+                            .blur(radius: 1)
+                    )
+                    .overlay(
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        Color.white.opacity(0.22),
+                                        Color.clear
+                                    ],
+                                    center: .topLeading,
+                                    startRadius: 16,
+                                    endRadius: 54
+                                )
+                            )
+                    )
+
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 33, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.14), radius: 1.6, x: 0, y: 1)
+            }
+            .frame(width: 78, height: 78)
+            .shadow(color: Color.blue.opacity(0.25), radius: 12, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
         }
         .disabled(vm.isLoading)
     }
@@ -179,11 +226,11 @@ struct TrackingView: View {
             return command.errorMessage ?? "Could not interpret this command"
         case .needsReview:
             return "Could not interpret this command"
-        case .committed:
+        /*case .committed:
             if let parsed = command.parsedEvent {
                 return "Mapped to \(parsed.event)"
             }
-            return nil
+            return nil*/
         case .parsing:
             return "Parsing..."
         default:

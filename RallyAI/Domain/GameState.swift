@@ -12,11 +12,17 @@ struct Score: Codable, Equatable {
     var them: Int = 0
 }
 
+struct ScoreAdjustment: Codable, Equatable {
+    var us: Int = 0
+    var them: Int = 0
+}
+
 struct GameState: Codable, Equatable {
     var teamID: UUID = UUID()
     var matchID: UUID = UUID()
     var currentSetNumber: Int = 1
     var events: [RallyEvent] = []
+    var currentSetScoreAdjustment: ScoreAdjustment = ScoreAdjustment()
     
     var score = Score()
 
@@ -25,12 +31,14 @@ struct GameState: Codable, Equatable {
         matchID: UUID = UUID(),
         currentSetNumber: Int = 1,
         events: [RallyEvent] = [],
+        currentSetScoreAdjustment: ScoreAdjustment = ScoreAdjustment(),
         score: Score = Score()
     ) {
         self.teamID = teamID
         self.matchID = matchID
         self.currentSetNumber = currentSetNumber
         self.events = events
+        self.currentSetScoreAdjustment = currentSetScoreAdjustment
         self.score = score
     }
 
@@ -40,6 +48,7 @@ struct GameState: Codable, Equatable {
         matchID = try container.decodeIfPresent(UUID.self, forKey: .matchID) ?? UUID()
         currentSetNumber = try container.decodeIfPresent(Int.self, forKey: .currentSetNumber) ?? 1
         events = try container.decodeIfPresent([RallyEvent].self, forKey: .events) ?? []
+        currentSetScoreAdjustment = try container.decodeIfPresent(ScoreAdjustment.self, forKey: .currentSetScoreAdjustment) ?? ScoreAdjustment()
         score = try container.decodeIfPresent(Score.self, forKey: .score) ?? Score()
     }
     
@@ -76,27 +85,40 @@ struct GameState: Codable, Equatable {
             
         case .startNewSet:
             currentSetNumber += 1
+            currentSetScoreAdjustment = ScoreAdjustment()
             rebuildScoreForCurrentSet()
             
         case .manualScore(let us, let them):
-            score.us = max(0, us)
-            score.them = max(0, them)
+            let derived = derivedScoreForCurrentSet()
+            currentSetScoreAdjustment = ScoreAdjustment(
+                us: max(0, us) - derived.us,
+                them: max(0, them) - derived.them
+            )
+            rebuildScoreForCurrentSet()
         
         }
     }
     
-    mutating func rebuildScoreForCurrentSet() {
-        score = Score()
-        
-        let setEvents = events.filter {$0.setNumber == currentSetNumber}
-        for e in setEvents {
-            guard let side = e.pointAwardedTo else { continue }
+    private func derivedScoreForCurrentSet() -> Score {
+        var derived = Score()
+        let setEvents = events.filter { $0.setNumber == currentSetNumber }
+
+        for event in setEvents {
+            guard let side = event.pointAwardedTo else { continue }
             if side == .us {
-                score.us += 1
-            }
-            else {
-                score.them += 1
+                derived.us += 1
+            } else {
+                derived.them += 1
             }
         }
+
+        return derived
+    }
+
+    mutating func rebuildScoreForCurrentSet() {
+        let derived = derivedScoreForCurrentSet()
+
+        score.us = max(0, derived.us + currentSetScoreAdjustment.us)
+        score.them = max(0, derived.them + currentSetScoreAdjustment.them)
     }
 }

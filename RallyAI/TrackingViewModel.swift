@@ -186,6 +186,14 @@ final class TrackingViewModel: ObservableObject {
         Task { await persistState() }
     }
 
+    func adjustScore(team: TeamSide, delta: Int) {
+        guard delta != 0 else { return }
+
+        let newUs = max(0, score.us + (team == .us ? delta : 0))
+        let newThem = max(0, score.them + (team == .them ? delta : 0))
+        manualScore(us: newUs, them: newThem)
+    }
+
     private func captureAndParseCommand(text: String, source: CommandSource) async {
         let command = CommandInput(
             id: UUID(),
