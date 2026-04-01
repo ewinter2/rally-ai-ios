@@ -123,21 +123,51 @@ struct CommandInput: Identifiable, Codable, Equatable {
 }
 
 struct PersistedAppState: Codable {
-    let gameState: GameState
-    let commandQueue: [CommandInput]
-    let inGameState: InGameState
+    let appState: AppState
 
-    init(gameState: GameState, commandQueue: [CommandInput], inGameState: InGameState) {
-        self.gameState = gameState
-        self.commandQueue = commandQueue
-        self.inGameState = inGameState
+    private enum CodingKeys: String, CodingKey {
+        case appState
+        case gameState
+        case commandQueue
+        case inGameState
+        case rosterState
+    }
+
+    init(appState: AppState) {
+        self.appState = appState
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(appState, forKey: .appState)
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        gameState = try container.decode(GameState.self, forKey: .gameState)
-        commandQueue = try container.decodeIfPresent([CommandInput].self, forKey: .commandQueue) ?? []
-        inGameState = try container.decodeIfPresent(InGameState.self, forKey: .inGameState) ?? InGameState()
+        if let appState = try container.decodeIfPresent(AppState.self, forKey: .appState) {
+            self.appState = appState
+            return
+        }
+
+        // Backward-compatible migration from the previous single-match persisted shape.
+        let gameState = try container.decode(GameState.self, forKey: .gameState)
+        let inGameState = try container.decodeIfPresent(InGameState.self, forKey: .inGameState) ?? InGameState()
+        let rosterState = try container.decodeIfPresent(RosterState.self, forKey: .rosterState) ?? RosterState()
+        let session = MatchSession(
+            id: gameState.matchID,
+            match: Match(
+                id: gameState.matchID,
+                teamID: gameState.teamID,
+                opponentName: "",
+                startedAt: Date()
+            ),
+            gameState: gameState,
+            rosterState: rosterState,
+            inGameState: inGameState,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        self.appState = AppState(activeMatchID: session.id, matches: [session])
     }
 }
 
@@ -155,15 +185,19 @@ struct Match: Identifiable, Codable, Equatable {
     var startedAt: Date
 }
 
-enum PlayerPosition: String, Codable, CaseIterable, Identifiable {
-    case setter = "S"
-    case outsideHitter = "OH"
-    case middleBlocker = "M"
-    case opposite = "OPP"
-    case libero = "L"
-    case defensiveSpecialist = "DS"
+struct MatchSession: Identifiable, Codable, Equatable {
+    let id: UUID
+    var match: Match
+    var gameState: GameState
+    var rosterState: RosterState
+    var inGameState: InGameState
+    var createdAt: Date
+    var updatedAt: Date
+}
 
-    var id: String { rawValue }
+struct AppState: Codable, Equatable {
+    var activeMatchID: UUID?
+    var matches: [MatchSession] = []
 }
 
 struct Player: Identifiable, Codable, Equatable {
@@ -172,8 +206,33 @@ struct Player: Identifiable, Codable, Equatable {
     var firstName: String
     var lastName: String
     var displayName: String
-    var positions: [PlayerPosition]
     var isActive: Bool
+
+    init(
+        id: UUID,
+        jerseyNumber: Int,
+        firstName: String,
+        lastName: String,
+        displayName: String,
+        isActive: Bool
+    ) {
+        self.id = id
+        self.jerseyNumber = jerseyNumber
+        self.firstName = firstName
+        self.lastName = lastName
+        self.displayName = displayName
+        self.isActive = isActive
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        jerseyNumber = try container.decode(Int.self, forKey: .jerseyNumber)
+        firstName = try container.decodeIfPresent(String.self, forKey: .firstName) ?? ""
+        lastName = try container.decodeIfPresent(String.self, forKey: .lastName) ?? ""
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName) ?? ""
+        isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+    }
 }
 
 struct MatchRosterEntry: Identifiable, Codable, Equatable {
@@ -209,11 +268,22 @@ struct PlayerMatchState: Identifiable, Codable, Equatable {
     var availableForSubstitution: Bool
 }
 
+struct DesignatedLiberoSlot: Identifiable, Codable, Equatable {
+    let slotNumber: Int
+    var playerID: UUID?
+
+    var id: Int { slotNumber }
+}
+
 struct RosterState: Codable, Equatable {
     var players: [Player] = []
     var matchRosterEntries: [MatchRosterEntry] = []
     var lineupSlots: [LineupSlot] = []
     var playerMatchStates: [PlayerMatchState] = []
+    var designatedLiberoSlots: [DesignatedLiberoSlot] = [
+        DesignatedLiberoSlot(slotNumber: 1, playerID: nil),
+        DesignatedLiberoSlot(slotNumber: 2, playerID: nil)
+    ]
 
     func playerByID(_ id: UUID) -> Player? {
         players.first(where: { $0.id == id })
@@ -237,5 +307,100 @@ struct RosterState: Codable, Equatable {
         lineupSlots
             .filter { $0.matchID == matchID && $0.setNumber == setNumber }
             .sorted { $0.rotationIndex < $1.rotationIndex }
+    }
+
+    mutating func upsertPlayer(_ player: Player) {
+        if let index = players.firstIndex(where: { $0.id == player.id }) {
+            players[index] = player
+        } else {
+            players.append(player)
+        }
+    }
+
+    mutating func removePlayer(_ playerID: UUID) {
+        players.removeAll { $0.id == playerID }
+        matchRosterEntries.removeAll { $0.playerID == playerID }
+        lineupSlots.removeAll { $0.playerID == playerID }
+        playerMatchStates.removeAll { $0.playerID == playerID }
+        for index in designatedLiberoSlots.indices where designatedLiberoSlots[index].playerID == playerID {
+            designatedLiberoSlots[index].playerID = nil
+        }
+    }
+
+    mutating func setDesignatedLibero(
+        _ playerID: UUID?,
+        for slotNumber: Int
+    ) {
+        guard let index = designatedLiberoSlots.firstIndex(where: { $0.slotNumber == slotNumber }) else { return }
+
+        for otherIndex in designatedLiberoSlots.indices where otherIndex != index && designatedLiberoSlots[otherIndex].playerID == playerID {
+            designatedLiberoSlots[otherIndex].playerID = nil
+        }
+
+        designatedLiberoSlots[index].playerID = playerID
+    }
+
+    mutating func ensureMatchRosterEntries(
+        for matchID: UUID,
+        availablePlayerIDs: [UUID]
+    ) {
+        let availableSet = Set(availablePlayerIDs)
+
+        for playerID in availableSet {
+            guard !matchRosterEntries.contains(where: { $0.matchID == matchID && $0.playerID == playerID }) else {
+                continue
+            }
+
+            matchRosterEntries.append(
+                MatchRosterEntry(
+                    id: UUID(),
+                    matchID: matchID,
+                    playerID: playerID,
+                    isAvailable: true,
+                    isStarter: false
+                )
+            )
+        }
+
+        for index in matchRosterEntries.indices where matchRosterEntries[index].matchID == matchID {
+            matchRosterEntries[index].isAvailable = availableSet.contains(matchRosterEntries[index].playerID)
+        }
+    }
+
+    mutating func syncCurrentSetState(
+        matchID: UUID,
+        setNumber: Int,
+        rotationSlotAssignments: [Int: UUID],
+        activeLiberoAssignments: [Int: UUID],
+        playerStatesByID: [UUID: PlayerMatchState]
+    ) {
+        lineupSlots.removeAll { $0.matchID == matchID && $0.setNumber == setNumber }
+        playerMatchStates.removeAll { $0.matchID == matchID }
+
+        let starterIDs = Set(rotationSlotAssignments.values)
+        let availablePlayerIDs = players
+            .filter(\.isActive)
+            .map(\.id)
+
+        ensureMatchRosterEntries(for: matchID, availablePlayerIDs: availablePlayerIDs)
+
+        for rotationIndex in (1...6) {
+            lineupSlots.append(
+                LineupSlot(
+                    id: UUID(),
+                    matchID: matchID,
+                    setNumber: setNumber,
+                    rotationIndex: rotationIndex,
+                    playerID: rotationSlotAssignments[rotationIndex],
+                    isLiberoSlot: activeLiberoAssignments[rotationIndex] != nil
+                )
+            )
+        }
+
+        playerMatchStates = Array(playerStatesByID.values)
+
+        for index in matchRosterEntries.indices where matchRosterEntries[index].matchID == matchID {
+            matchRosterEntries[index].isStarter = starterIDs.contains(matchRosterEntries[index].playerID)
+        }
     }
 }
