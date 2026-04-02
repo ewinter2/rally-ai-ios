@@ -157,8 +157,10 @@ final class TrackingViewModel: ObservableObject {
             .sorted { $0.createdAt < $1.createdAt }
     }
 
-    func startNewMatch(opponentName: String = "") {
+    func startNewMatch(matchName: String = "", ourTeamName: String = "", opponentName: String = "") {
         let session = Self.makeSession(
+            matchName: matchName,
+            ourTeamName: ourTeamName,
             opponentName: opponentName,
             rosterTemplate: rosterTemplateForNewMatch()
         )
@@ -172,6 +174,16 @@ final class TrackingViewModel: ObservableObject {
         guard let session = appState.matches.first(where: { $0.id == id }) else { return }
         appState.activeMatchID = id
         loadSession(session, preserveCommands: false)
+        Task { await persistState() }
+    }
+
+    /// Updates the name and team labels for any match by ID (active or historical).
+    func updateMatchInfo(id: UUID, matchName: String, ourTeamName: String, opponentName: String) {
+        guard let index = appState.matches.firstIndex(where: { $0.id == id }) else { return }
+        appState.matches[index].match.matchName    = matchName.trimmingCharacters(in: .whitespacesAndNewlines)
+        appState.matches[index].match.ourTeamName  = ourTeamName.trimmingCharacters(in: .whitespacesAndNewlines)
+        appState.matches[index].match.opponentName = opponentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        appState.matches[index].updatedAt = Date()
         Task { await persistState() }
     }
 
@@ -617,11 +629,16 @@ final class TrackingViewModel: ObservableObject {
             matchRosterEntries: [],
             lineupSlots: [],
             playerMatchStates: [],
-            designatedLiberoSlots: rosterState.designatedLiberoSlots
+            designatedLiberoSlots: [
+                DesignatedLiberoSlot(slotNumber: 1, playerID: nil),
+                DesignatedLiberoSlot(slotNumber: 2, playerID: nil)
+            ]
         )
     }
 
     private static func makeSession(
+        matchName: String = "",
+        ourTeamName: String = "",
         opponentName: String = "",
         rosterTemplate: RosterState = RosterState()
     ) -> MatchSession {
@@ -630,6 +647,8 @@ final class TrackingViewModel: ObservableObject {
         let match = Match(
             id: matchID,
             teamID: teamID,
+            matchName: matchName,
+            ourTeamName: ourTeamName,
             opponentName: opponentName,
             startedAt: Date()
         )

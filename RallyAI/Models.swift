@@ -181,8 +181,36 @@ struct Team: Identifiable, Codable, Equatable {
 struct Match: Identifiable, Codable, Equatable {
     let id: UUID
     let teamID: UUID
-    var opponentName: String
+    var matchName: String       // User-editable label, e.g. "Regionals Game 1"
+    var ourTeamName: String     // "Us" team display name
+    var opponentName: String    // "Them" team display name
     var startedAt: Date
+
+    init(
+        id: UUID,
+        teamID: UUID,
+        matchName: String = "",
+        ourTeamName: String = "",
+        opponentName: String = "",
+        startedAt: Date
+    ) {
+        self.id = id
+        self.teamID = teamID
+        self.matchName = matchName
+        self.ourTeamName = ourTeamName
+        self.opponentName = opponentName
+        self.startedAt = startedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id           = try c.decode(UUID.self,   forKey: .id)
+        teamID       = try c.decode(UUID.self,   forKey: .teamID)
+        matchName    = try c.decodeIfPresent(String.self, forKey: .matchName)    ?? ""
+        ourTeamName  = try c.decodeIfPresent(String.self, forKey: .ourTeamName) ?? ""
+        opponentName = try c.decodeIfPresent(String.self, forKey: .opponentName) ?? ""
+        startedAt    = try c.decode(Date.self,   forKey: .startedAt)
+    }
 }
 
 struct MatchSession: Identifiable, Codable, Equatable {
