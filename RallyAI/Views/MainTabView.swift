@@ -7,17 +7,17 @@ struct MainTabView: View {
         TabView {
             TrackingView()
                 .tabItem {
-                    Label("Tracking", systemImage: "mic")
+                    Label("Tracking", systemImage: "sportscourt.fill")
                 }
 
             StatisticsView()
                 .tabItem {
-                    Label("Statistics", systemImage: "tablecells")
+                    Label("Statistics", systemImage: "chart.bar.fill")
                 }
 
             RosterView()
                 .tabItem {
-                    Label("Roster", systemImage: "tshirt")
+                    Label("Roster", systemImage: "person.3.fill")
                 }
         }
         .environmentObject(vm)

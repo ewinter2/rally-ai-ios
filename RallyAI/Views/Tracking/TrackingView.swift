@@ -40,57 +40,85 @@ struct TrackingView: View {
             }
             .navigationTitle("Tracking")
             .safeAreaInset(edge: .bottom) {
-                if isComposerVisible {
-                    composerBar
+                Group {
+                    if isComposerVisible {
+                        composerBar
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isComposerVisible)
             }
         }
     }
 
-    private var scoreHeader: some View {
-        HStack(alignment: .center, spacing: 20) {
-            scoreBox(label: "Us", value: vm.score.us, team: .us)
+    // MARK: - Score Header
 
-            VStack(spacing: 2) {
+    private var scoreHeader: some View {
+        HStack(alignment: .center, spacing: 16) {
+            scoreBox(label: ourTeamLabel, value: vm.score.us, team: .us)
+
+            VStack(spacing: 4) {
                 Text("Set \(vm.currentSetNumber)")
                     .font(.headline)
-
-                Text("\(vm.setsWon.us) - \(vm.setsWon.them)")
+                Text("\(vm.setsWon.us) – \(vm.setsWon.them)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
 
-            scoreBox(label: "Them", value: vm.score.them, team: .them)
+            scoreBox(label: opponentLabel, value: vm.score.them, team: .them)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var ourTeamLabel: String {
+        let name = vm.activeMatch?.ourTeamName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return name.isEmpty ? "Us" : name
+    }
+
+    private var opponentLabel: String {
+        let name = vm.activeMatch?.opponentName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return name.isEmpty ? "Them" : name
     }
 
     private func scoreBox(label: String, value: Int, team: TeamSide) -> some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
             Text(label)
-                .font(.subheadline)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text("\(value)")
-                .font(.system(size: 38, weight: .medium, design: .rounded))
+                .font(.system(size: 44, weight: .bold, design: .rounded))
+                .contentTransition(.numericText())
+                .animation(.spring(response: 0.3, dampingFraction: 0.75), value: value)
         }
-        .frame(width: 84, height: 84)
-        .background(Color(.secondarySystemGroupedBackground))
+        .frame(width: 96, height: 90)
+        .background(Color(.tertiarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .highPriorityGesture(
             DragGesture(minimumDistance: 18)
                 .onEnded { drag in
                     let vertical = drag.translation.height
                     let horizontal = drag.translation.width
-
                     guard abs(vertical) > abs(horizontal) else { return }
-
                     if vertical <= -24 {
-                        vm.adjustScore(team: team, delta: 1)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            vm.adjustScore(team: team, delta: 1)
+                        }
                     } else if vertical >= 24 {
-                        vm.adjustScore(team: team, delta: -1)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            vm.adjustScore(team: team, delta: -1)
+                        }
                     }
                 }
         )
     }
+
+    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: 8) {
@@ -103,55 +131,67 @@ struct TrackingView: View {
         .frame(maxWidth: .infinity)
         .padding(24)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
+
+    // MARK: - Command Card
 
     private func commandCard(_ command: CommandInput) -> some View {
-        let style = style(for: command)
+        let style = cardStyle(for: command)
 
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                Text(command.rawText)
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
+        return HStack(spacing: 0) {
+            // Status accent bar
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(style.accentColor)
+                .frame(width: 4)
+                .padding(.vertical, 6)
 
-                Spacer(minLength: 12)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top) {
+                    Text(command.rawText)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
 
-                statusIcon(for: command)
-            }
+                    Spacer(minLength: 12)
 
-            if let message = statusMessage(for: command) {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(style.subtitleColor)
-            }
-
-            HStack(spacing: 14) {
-                Button {
-                    draftCommand = command.rawText
-                    isComposerVisible = true
-                    isCommandFieldFocused = true
-                } label: {
-                    Image(systemName: "pencil")
+                    statusIcon(for: command)
                 }
-                .buttonStyle(.plain)
 
-                Button {
-                    vm.removeCommand(id: command.id)
-                } label: {
-                    Image(systemName: "trash")
+                if let message = statusMessage(for: command) {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(style.subtitleColor)
                 }
-                .buttonStyle(.plain)
+
+                HStack(spacing: 14) {
+                    Button {
+                        draftCommand = command.rawText
+                        isComposerVisible = true
+                        isCommandFieldFocused = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        vm.removeCommand(id: command.id)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.plain)
+                }
+                .foregroundStyle(.secondary)
+                .font(.callout.weight(.medium))
             }
-            .foregroundStyle(.primary)
-            .font(.headline)
+            .padding(14)
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(style.background)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
+
+    // MARK: - Mic Button
 
     private var micButton: some View {
         Button {
@@ -161,14 +201,8 @@ struct TrackingView: View {
             ZStack {
                 Circle()
                     .fill(.ultraThinMaterial)
-                    .overlay(
-                        Circle()
-                            .fill(Color.blue.opacity(0.34))
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.62), lineWidth: 1)
-                    )
+                    .overlay(Circle().fill(Color.blue.opacity(0.34)))
+                    .overlay(Circle().stroke(Color.white.opacity(0.62), lineWidth: 1))
                     .overlay(
                         Circle()
                             .stroke(Color.blue.opacity(0.32), lineWidth: 2)
@@ -178,10 +212,7 @@ struct TrackingView: View {
                         Circle()
                             .fill(
                                 RadialGradient(
-                                    colors: [
-                                        Color.white.opacity(0.22),
-                                        Color.clear
-                                    ],
+                                    colors: [Color.white.opacity(0.22), Color.clear],
                                     center: .topLeading,
                                     startRadius: 16,
                                     endRadius: 54
@@ -200,6 +231,8 @@ struct TrackingView: View {
         }
         .disabled(vm.isLoading)
     }
+
+    // MARK: - Composer Bar
 
     private var composerBar: some View {
         HStack(spacing: 10) {
@@ -226,17 +259,14 @@ struct TrackingView: View {
         .background(Color(.systemBackground))
     }
 
+    // MARK: - Status Helpers
+
     private func statusMessage(for command: CommandInput) -> String? {
         switch command.status {
         case .failed:
             return command.errorMessage ?? "Could not interpret this command"
         case .needsReview:
             return "Could not interpret this command"
-        /*case .committed:
-            if let parsed = command.parsedEvent {
-                return "Mapped to \(parsed.event)"
-            }
-            return nil*/
         case .parsing:
             return "Parsing..."
         default:
@@ -266,16 +296,16 @@ struct TrackingView: View {
         .font(.title2)
     }
 
-    private func style(for command: CommandInput) -> (background: Color, subtitleColor: Color) {
+    private func cardStyle(for command: CommandInput) -> (background: Color, accentColor: Color, subtitleColor: Color) {
         switch command.status {
         case .committed:
-            return (Color.green.opacity(0.28), .green)
+            return (Color.green.opacity(0.1), .green, .green)
         case .failed:
-            return (Color.red.opacity(0.24), .red)
+            return (Color.red.opacity(0.08), .red, .red)
         case .needsReview:
-            return (Color.orange.opacity(0.24), .orange)
+            return (Color.orange.opacity(0.1), .orange, .orange)
         default:
-            return (Color(.secondarySystemGroupedBackground), .secondary)
+            return (Color(.secondarySystemGroupedBackground), Color(.separator), .secondary)
         }
     }
 }

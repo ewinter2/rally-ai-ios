@@ -282,15 +282,20 @@ struct StatisticsView: View {
                 }
             }
         }
-        .frame(width: 84, height: 78)
+        .frame(width: 88, height: 82)
         .background(
             isSelected
                 ? Color.blue
                 : Color(.secondarySystemGroupedBackground),
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
-        .onTapGesture { selectedSet = setNum }
-        .animation(.easeInOut(duration: 0.15), value: selectedSet)
+        .scaleEffect(isSelected ? 1.04 : 1.0)
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                selectedSet = setNum
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.75), value: selectedSet)
     }
 
     // MARK: - Section Builder

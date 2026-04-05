@@ -104,10 +104,10 @@ struct LineupSectionView: View {
                 .buttonStyle(.plain)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Menu {
                     ForEach(1...6, id: \.self) { rotation in
-                        Button("Row \(rotation)") {
+                        Button("Rotation \(rotation)") {
                             do {
                                 try vm.setCurrentRotationNumber(rotation)
                             } catch {
@@ -116,9 +116,18 @@ struct LineupSectionView: View {
                         }
                     }
                 } label: {
-                    Text("Row \(vm.currentRotationNumber)")
-                        .font(.title.weight(.semibold))
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 4) {
+                        Text("Rotation \(vm.currentRotationNumber)")
+                            .font(.headline.weight(.semibold))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(.tertiarySystemFill))
+                    .clipShape(Capsule())
                 }
 
                 Button {
@@ -128,20 +137,23 @@ struct LineupSectionView: View {
                         lineupErrorMessage = error.localizedDescription
                     }
                 } label: {
-                    Image(systemName: "arrow.clockwise.circle")
-                        .font(.system(size: 34, weight: .regular))
-                        .foregroundStyle(.primary)
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                        .font(.system(size: 30, weight: .regular))
+                        .foregroundStyle(Color.blue.opacity(0.85))
                 }
 
                 Spacer()
+
+                Text(serverText)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color(.tertiarySystemFill))
+                    .clipShape(Capsule())
             }
             .frame(maxWidth: .infinity)
-            .padding(.top, 6)
-
-            Text(serverText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 4)
         }
     }
 
