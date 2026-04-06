@@ -127,8 +127,7 @@ struct PersistedAppState: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case appState
-        case gameState
-        case commandQueue
+        case gameState  // legacy: used only in backward-compatible decoder path
         case inGameState
         case rosterState
     }

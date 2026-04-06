@@ -9,7 +9,9 @@
 import Foundation
 
 enum AppConfig {
-    // Using localhost for Simulator.
-    // Will have to switch later
+    #if DEBUG
     static let backendBaseURL: URL = URL(string: "http://127.0.0.1:8000")!
+    #else
+    static let backendBaseURL: URL = URL(string: "https://web-production-98ea9.up.railway.app")!
+    #endif
 }
