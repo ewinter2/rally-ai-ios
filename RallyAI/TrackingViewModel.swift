@@ -65,6 +65,16 @@ final class TrackingViewModel: ObservableObject {
     var savedMatches: [MatchSession] {
         appState.matches.sorted { $0.updatedAt > $1.updatedAt }
     }
+    /// The team that has won the current set, or nil if the set is still in progress.
+    /// Uses standard volleyball rules: first to 25 (15 in set 5), must lead by 2.
+    var setWinningTeam: TeamSide? {
+        let s = score
+        let target = currentSetNumber == 5 ? 15 : 25
+        if s.us >= target && s.us - s.them >= 2 { return .us }
+        if s.them >= target && s.them - s.us >= 2 { return .them }
+        return nil
+    }
+
     var currentRotationNumber: Int {
         inGameState.stateForSet(gameState.currentSetNumber)?.currentRotationNumber ?? 1
     }

@@ -9,9 +9,32 @@ struct TrackingView: View {
     @State private var isPulsing = false
     @FocusState private var isCommandFieldFocused: Bool
 
+    /// Tracks the score at which the set-win banner was last dismissed.
+    /// When the live score matches this, the auto-triggered banner stays hidden.
+    @State private var setWinBannerDismissedScore: Score? = nil
+    /// True when the coach manually tapped "End Set" mid-game (no win condition required).
+    @State private var manualEndSetRequested = false
+    /// Which set's command feed is currently displayed. Defaults to the live set.
+    @State private var viewingSetNumber: Int = 1
+
+    private var isViewingPastSet: Bool { viewingSetNumber < vm.currentSetNumber }
+
+    private var viewingScore: Score {
+        isViewingPastSet
+            ? vm.gameState.derivedScore(forSet: viewingSetNumber)
+            : vm.score
+    }
+
+    private var showSetWinBanner: Bool {
+        guard !isViewingPastSet else { return false }
+        if manualEndSetRequested { return true }
+        guard vm.setWinningTeam != nil else { return false }
+        return setWinBannerDismissedScore != vm.score
+    }
+
     private var commandsForCurrentSet: [CommandInput] {
         vm.commandQueue
-            .filter { $0.setNumber == vm.currentSetNumber }
+            .filter { $0.setNumber == viewingSetNumber }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -25,6 +48,23 @@ struct TrackingView: View {
                     VStack(spacing: 14) {
                         scoreHeader
 
+                        if showSetWinBanner {
+                            setWinBanner
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+
+                        if isViewingPastSet {
+                            HStack(spacing: 6) {
+                                Image(systemName: "clock")
+                                    .font(.caption2)
+                                Text("Viewing Set \(viewingSetNumber) — tap → to return to live")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 6)
+                        }
+
                         if commandsForCurrentSet.isEmpty {
                             emptyState
                         } else {
@@ -33,6 +73,7 @@ struct TrackingView: View {
                             }
                         }
                     }
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSetWinBanner)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .padding(.bottom, 120)
@@ -65,6 +106,7 @@ struct TrackingView: View {
             }
         }
         .onAppear {
+            viewingSetNumber = vm.currentSetNumber
             // Wire auto-submit: fires after 1.5 s of silence during voice recording
             voice.onAutoSubmit = { text in
                 Task {
@@ -73,6 +115,11 @@ struct TrackingView: View {
                     draftCommand = ""
                     isComposerVisible = false
                 }
+            }
+        }
+        .onChange(of: vm.currentSetNumber) { _, newSetNumber in
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                viewingSetNumber = newSetNumber
             }
         }
     }
@@ -116,18 +163,66 @@ struct TrackingView: View {
 
     private var scoreHeader: some View {
         HStack(alignment: .center, spacing: 16) {
-            scoreBox(label: ourTeamLabel, value: vm.score.us, team: .us)
+            scoreBox(label: ourTeamLabel, value: viewingScore.us, team: .us)
 
             VStack(spacing: 4) {
-                Text("Set \(vm.currentSetNumber)")
-                    .font(.headline)
+                HStack(spacing: 6) {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            viewingSetNumber -= 1
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .opacity(viewingSetNumber > 1 ? 1 : 0)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewingSetNumber <= 1)
+
+                    Text("Set \(viewingSetNumber)")
+                        .font(.headline)
+                        .contentTransition(.numericText())
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewingSetNumber)
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            viewingSetNumber += 1
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .opacity(isViewingPastSet ? 1 : 0)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!isViewingPastSet)
+                }
+
                 Text("\(vm.setsWon.us) – \(vm.setsWon.them)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                if !isViewingPastSet {
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            manualEndSetRequested = true
+                        }
+                    } label: {
+                        Text("End Set")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
+                }
             }
             .frame(maxWidth: .infinity)
 
-            scoreBox(label: opponentLabel, value: vm.score.them, team: .them)
+            scoreBox(label: opponentLabel, value: viewingScore.them, team: .them)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -176,6 +271,81 @@ struct TrackingView: View {
                         }
                     }
                 }
+        )
+    }
+
+    // MARK: - Set Win Banner
+
+    private var setWinBanner: some View {
+        let winningTeam = vm.setWinningTeam
+        let isManual = winningTeam == nil
+        let weWon = winningTeam == .us
+        let accentColor: Color = isManual ? .orange : (weWon ? .green : .red)
+        let ourName = vm.activeMatch?.ourTeamName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let theirName = vm.activeMatch?.opponentName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let teamName: String = weWon
+            ? (ourName.isEmpty ? "Us" : ourName)
+            : (theirName.isEmpty ? "Them" : theirName)
+        let setsWon = vm.setsWon
+
+        return VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: isManual ? "flag.checkered" : (weWon ? "trophy.fill" : "flag.fill"))
+                    .foregroundStyle(accentColor)
+                    .font(.title3.weight(.semibold))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isManual ? "End of Set \(vm.currentSetNumber)?" : "\(teamName) wins Set \(vm.currentSetNumber)")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Sets: \(setsWon.us) – \(setsWon.them)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        vm.startNewSet()
+                        setWinBannerDismissedScore = nil
+                        manualEndSetRequested = false
+                    }
+                } label: {
+                    Text("New Set")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(Color.blue, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        setWinBannerDismissedScore = vm.score
+                        manualEndSetRequested = false
+                    }
+                } label: {
+                    Text("Keep Going")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(accentColor.opacity(0.35), lineWidth: 1.5)
+                )
         )
     }
 
