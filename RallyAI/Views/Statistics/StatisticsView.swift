@@ -112,8 +112,19 @@ private struct StatTable: View {
 
 struct StatisticsView: View {
     @EnvironmentObject var vm: TrackingViewModel
+    /// When non-nil, displays this past match's stats in read-only mode.
+    var session: MatchSession? = nil
     /// 0 = Full Match, N = Set N
     @State private var selectedSet: Int = 0
+
+    // MARK: Data-source abstraction (active match vs. past match)
+
+    private var activeGameState: GameState {
+        session?.gameState ?? vm.gameState
+    }
+    private var activeRosterState: RosterState {
+        session?.rosterState ?? vm.rosterState
+    }
 
     // MARK: Column Definitions
 
@@ -153,12 +164,12 @@ struct StatisticsView: View {
 
     private var scopeEvents: [RallyEvent] {
         selectedSet == 0
-            ? vm.gameState.events
-            : vm.gameState.events.filter { $0.setNumber == selectedSet }
+            ? activeGameState.events
+            : activeGameState.events.filter { $0.setNumber == selectedSet }
     }
 
     private var activePlayers: [Player] {
-        vm.rosterState.players
+        activeRosterState.players
             .filter(\.isActive)
             .sorted {
                 $0.jerseyNumber != $1.jerseyNumber
@@ -174,26 +185,54 @@ struct StatisticsView: View {
     // MARK: Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    scopeCardRow
-
-                    statSection("Serving",      cols: servCols, rows: servingRows)
-                    statSection("Attacking",    cols: atkCols,  rows: attackingRows)
-                    statSection("Blocking",     cols: blkCols,  rows: blockingRows)
-                    statSection("Ball Handling",cols: bhCols,   rows: ballHandlingRows)
-                    statSection("Digs",         cols: digCols,  rows: digsRows)
-                    statSection("Passing",      cols: passCols, rows: passingRows)
+        let content = ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                if session != nil {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                            .font(.caption.weight(.semibold))
+                        Text("Past match — read only")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 32)
+
+                scopeCardRow
+
+                statSection("Serving",      cols: servCols, rows: servingRows)
+                statSection("Attacking",    cols: atkCols,  rows: attackingRows)
+                statSection("Blocking",     cols: blkCols,  rows: blockingRows)
+                statSection("Ball Handling",cols: bhCols,   rows: ballHandlingRows)
+                statSection("Digs",         cols: digCols,  rows: digsRows)
+                statSection("Passing",      cols: passCols, rows: passingRows)
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Game Statistics")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
         }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(session.map { matchTitle($0) } ?? "Game Statistics")
+        .navigationBarTitleDisplayMode(.inline)
+
+        if session != nil {
+            content
+        } else {
+            NavigationStack { content }
+        }
+    }
+
+    private func matchTitle(_ s: MatchSession) -> String {
+        let name = s.match.matchName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty { return name }
+        let us   = s.match.ourTeamName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let them = s.match.opponentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !us.isEmpty && !them.isEmpty { return "\(us) vs \(them)" }
+        if !them.isEmpty { return "vs \(them)" }
+        return s.match.startedAt.formatted(date: .abbreviated, time: .omitted)
     }
 
     // MARK: - Scope Card Row
@@ -202,20 +241,21 @@ struct StatisticsView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 // Full Match card — shows sets won across completed sets
+                let setsWon = activeGameState.setsWonBeforeCurrentSet()
                 scopeCard(
                     setNum: 0,
                     title: "Full Match",
-                    score: "\(vm.setsWon.us) – \(vm.setsWon.them)",
+                    score: "\(setsWon.us) – \(setsWon.them)",
                     badge: nil,
                     isLive: false
                 )
 
                 // One card per set
-                ForEach(1...max(1, vm.currentSetNumber), id: \.self) { setNum in
-                    let isLive = setNum == vm.currentSetNumber
+                ForEach(1...max(1, activeGameState.currentSetNumber), id: \.self) { setNum in
+                    let isLive = session == nil && setNum == activeGameState.currentSetNumber
                     let score  = isLive
-                        ? vm.score
-                        : vm.gameState.derivedScore(forSet: setNum)
+                        ? activeGameState.derivedScore(forSet: activeGameState.currentSetNumber)
+                        : activeGameState.derivedScore(forSet: setNum)
                     let badge: String? = isLive ? "LIVE"
                         : score.us > score.them ? "W"
                         : score.them > score.us ? "L"
@@ -442,7 +482,7 @@ struct StatisticsView: View {
 
     private func resolvedPlayerID(for event: RallyEvent) -> UUID? {
         if let pid = event.playerID { return pid }
-        if let num = event.playerNumber { return vm.rosterState.playerByJerseyNumber(num)?.id }
+        if let num = event.playerNumber { return activeRosterState.playerByJerseyNumber(num)?.id }
         return nil
     }
 }

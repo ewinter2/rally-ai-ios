@@ -5,6 +5,7 @@ struct MatchListSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var editingMatchSession: MatchSession?
+    @State private var viewingStatsSession: MatchSession?
     @State private var matchNameDraft     = ""
     @State private var ourTeamNameDraft   = ""
     @State private var opponentNameDraft  = ""
@@ -52,6 +53,14 @@ struct MatchListSheet: View {
                     matchEditorForm(session)
                 }
             }
+            .navigationDestination(isPresented: Binding(
+                get: { viewingStatsSession != nil },
+                set: { if !$0 { viewingStatsSession = nil } }
+            )) {
+                if let session = viewingStatsSession {
+                    StatisticsView(session: session)
+                }
+            }
         }
     }
 
@@ -86,6 +95,18 @@ struct MatchListSheet: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                viewingStatsSession = session
+            } label: {
+                Image(systemName: "chart.bar.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 34, height: 34)
+                    .background(Color(.tertiarySystemGroupedBackground))
+                    .clipShape(Circle())
             }
             .buttonStyle(.plain)
 
