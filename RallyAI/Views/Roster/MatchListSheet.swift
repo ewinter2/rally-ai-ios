@@ -69,6 +69,8 @@ struct MatchListSheet: View {
     private func matchListRow(_ session: MatchSession) -> some View {
         let isActive = session.id == vm.activeMatchID
 
+        let isCompleted = session.match.isCompleted
+
         return HStack(alignment: .center, spacing: 12) {
             Button {
                 vm.switchToMatch(session.id)
@@ -83,6 +85,14 @@ struct MatchListSheet: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.blue)
+                        }
+                        if isCompleted {
+                            Text("Final")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondary, in: Capsule())
                         }
                     }
 
@@ -191,7 +201,7 @@ struct MatchListSheet: View {
     private func setScoreText(for session: MatchSession) -> String {
         let numSets = session.gameState.currentSetNumber
         let parts = (1...numSets).map { setNum -> String in
-            let score = session.gameState.derivedScore(forSet: setNum)
+            let score = session.gameState.scoreForSet(setNum)
             return "\(score.us)–\(score.them)"
         }
         return parts.joined(separator: "  ·  ")

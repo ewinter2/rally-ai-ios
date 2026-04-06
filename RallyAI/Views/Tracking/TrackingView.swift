@@ -20,9 +20,7 @@ struct TrackingView: View {
     private var isViewingPastSet: Bool { viewingSetNumber < vm.currentSetNumber }
 
     private var viewingScore: Score {
-        isViewingPastSet
-            ? vm.gameState.derivedScore(forSet: viewingSetNumber)
-            : vm.score
+        vm.gameState.scoreForSet(viewingSetNumber)
     }
 
     private var showSetWinBanner: Bool {
@@ -48,7 +46,9 @@ struct TrackingView: View {
                     VStack(spacing: 14) {
                         scoreHeader
 
-                        if showSetWinBanner {
+                        if vm.isActiveMatchCompleted {
+                            completedMatchBanner
+                        } else if showSetWinBanner {
                             setWinBanner
                                 .transition(.move(edge: .top).combined(with: .opacity))
                         }
@@ -79,13 +79,15 @@ struct TrackingView: View {
                     .padding(.bottom, 120)
                 }
 
-                micButton
-                    .padding(.bottom, 20)
+                if !vm.isActiveMatchCompleted {
+                    micButton
+                        .padding(.bottom, 20)
+                }
             }
             .navigationTitle("Tracking")
             .safeAreaInset(edge: .bottom) {
                 Group {
-                    if isComposerVisible {
+                    if isComposerVisible && !vm.isActiveMatchCompleted {
                         composerBar
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -274,6 +276,39 @@ struct TrackingView: View {
         )
     }
 
+    // MARK: - Completed Match Banner
+
+    private var completedMatchBanner: some View {
+        let setsWon = vm.setsWon
+        let weWon = setsWon.us > setsWon.them
+        let accentColor: Color = weWon ? .green : .red
+
+        return HStack(spacing: 12) {
+            Image(systemName: weWon ? "trophy.fill" : "flag.fill")
+                .foregroundStyle(accentColor)
+                .font(.title3)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Match complete")
+                    .font(.subheadline.weight(.semibold))
+                Text("Final sets: \(setsWon.us) – \(setsWon.them) · Read only")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(accentColor.opacity(0.35), lineWidth: 1.5)
+                )
+        )
+    }
+
     // MARK: - Set Win Banner
 
     private var setWinBanner: some View {
@@ -319,6 +354,21 @@ struct TrackingView: View {
                         .padding(.vertical, 9)
                         .background(Color.blue, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        vm.completeMatch()
+                        manualEndSetRequested = false
+                    }
+                } label: {
+                    Text("End Match")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .foregroundStyle(.red)
                 }
                 .buttonStyle(.plain)
 

@@ -23,7 +23,9 @@ struct GameState: Codable, Equatable {
     var currentSetNumber: Int = 1
     var events: [RallyEvent] = []
     var currentSetScoreAdjustment: ScoreAdjustment = ScoreAdjustment()
-    
+    /// Final (adjusted) score saved for each completed set keyed by set number.
+    var completedSetScores: [Int: Score] = [:]
+
     var score = Score()
 
     init(
@@ -32,6 +34,7 @@ struct GameState: Codable, Equatable {
         currentSetNumber: Int = 1,
         events: [RallyEvent] = [],
         currentSetScoreAdjustment: ScoreAdjustment = ScoreAdjustment(),
+        completedSetScores: [Int: Score] = [:],
         score: Score = Score()
     ) {
         self.teamID = teamID
@@ -39,6 +42,7 @@ struct GameState: Codable, Equatable {
         self.currentSetNumber = currentSetNumber
         self.events = events
         self.currentSetScoreAdjustment = currentSetScoreAdjustment
+        self.completedSetScores = completedSetScores
         self.score = score
     }
 
@@ -49,6 +53,7 @@ struct GameState: Codable, Equatable {
         currentSetNumber = try container.decodeIfPresent(Int.self, forKey: .currentSetNumber) ?? 1
         events = try container.decodeIfPresent([RallyEvent].self, forKey: .events) ?? []
         currentSetScoreAdjustment = try container.decodeIfPresent(ScoreAdjustment.self, forKey: .currentSetScoreAdjustment) ?? ScoreAdjustment()
+        completedSetScores = try container.decodeIfPresent([Int: Score].self, forKey: .completedSetScores) ?? [:]
         score = try container.decodeIfPresent(Score.self, forKey: .score) ?? Score()
     }
     
@@ -84,6 +89,7 @@ struct GameState: Codable, Equatable {
             rebuildScoreForCurrentSet()
             
         case .startNewSet:
+            completedSetScores[currentSetNumber] = score   // snapshot final score before reset
             currentSetNumber += 1
             currentSetScoreAdjustment = ScoreAdjustment()
             rebuildScoreForCurrentSet()
@@ -122,6 +128,15 @@ struct GameState: Codable, Equatable {
         score.them = max(0, derived.them + currentSetScoreAdjustment.them)
     }
 
+    /// The authoritative score for any set number.
+    /// For completed sets uses the saved snapshot (includes manual adjustments).
+    /// For the current live set uses the running score.
+    /// Falls back to event-derived score for old data that predates snapshotting.
+    func scoreForSet(_ setNumber: Int) -> Score {
+        if setNumber == currentSetNumber { return score }
+        return completedSetScores[setNumber] ?? derivedScore(forSet: setNumber)
+    }
+
     func derivedScore(forSet setNumber: Int) -> Score {
         var derived = Score()
         let setEvents = events.filter { $0.setNumber == setNumber }
@@ -143,7 +158,7 @@ struct GameState: Codable, Equatable {
 
         var wins = Score()
         for set in 1..<currentSetNumber {
-            let setScore = derivedScore(forSet: set)
+            let setScore = scoreForSet(set)
             if setScore.us > setScore.them {
                 wins.us += 1
             } else if setScore.them > setScore.us {

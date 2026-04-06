@@ -253,9 +253,7 @@ struct StatisticsView: View {
                 // One card per set
                 ForEach(1...max(1, activeGameState.currentSetNumber), id: \.self) { setNum in
                     let isLive = session == nil && setNum == activeGameState.currentSetNumber
-                    let score  = isLive
-                        ? activeGameState.derivedScore(forSet: activeGameState.currentSetNumber)
-                        : activeGameState.derivedScore(forSet: setNum)
+                    let score  = activeGameState.scoreForSet(setNum)
                     let badge: String? = isLive ? "LIVE"
                         : score.us > score.them ? "W"
                         : score.them > score.us ? "L"

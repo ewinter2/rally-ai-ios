@@ -62,6 +62,7 @@ final class TrackingViewModel: ObservableObject {
         guard let session = activeSession else { return nil }
         return session.match
     }
+    var isActiveMatchCompleted: Bool { activeMatch?.isCompleted ?? false }
     var savedMatches: [MatchSession] {
         appState.matches.sorted { $0.updatedAt > $1.updatedAt }
     }
@@ -272,6 +273,13 @@ final class TrackingViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func completeMatch() {
+        guard let idx = appState.matches.firstIndex(where: { $0.id == appState.activeMatchID }) else { return }
+        appState.matches[idx].match.completedAt = Date()
+        writeBackActiveSession()
+        Task { await persistState() }
     }
 
     func startNewSet() {

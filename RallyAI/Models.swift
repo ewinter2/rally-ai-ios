@@ -185,6 +185,9 @@ struct Match: Identifiable, Codable, Equatable {
     var ourTeamName: String     // "Us" team display name
     var opponentName: String    // "Them" team display name
     var startedAt: Date
+    var completedAt: Date?      // Set when coach finalises the match; nil = in progress
+
+    var isCompleted: Bool { completedAt != nil }
 
     init(
         id: UUID,
@@ -192,7 +195,8 @@ struct Match: Identifiable, Codable, Equatable {
         matchName: String = "",
         ourTeamName: String = "",
         opponentName: String = "",
-        startedAt: Date
+        startedAt: Date,
+        completedAt: Date? = nil
     ) {
         self.id = id
         self.teamID = teamID
@@ -200,6 +204,7 @@ struct Match: Identifiable, Codable, Equatable {
         self.ourTeamName = ourTeamName
         self.opponentName = opponentName
         self.startedAt = startedAt
+        self.completedAt = completedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -210,6 +215,7 @@ struct Match: Identifiable, Codable, Equatable {
         ourTeamName  = try c.decodeIfPresent(String.self, forKey: .ourTeamName) ?? ""
         opponentName = try c.decodeIfPresent(String.self, forKey: .opponentName) ?? ""
         startedAt    = try c.decode(Date.self,   forKey: .startedAt)
+        completedAt  = try c.decodeIfPresent(Date.self,   forKey: .completedAt)
     }
 }
 
