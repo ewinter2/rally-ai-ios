@@ -533,24 +533,48 @@ struct TrackingView: View {
                 // Button face
                 if isRecording {
                     Circle()
-                        .fill(Color.red)
-                        .overlay(Circle().stroke(Color.white.opacity(0.5), lineWidth: 1))
-                } else {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .overlay(Circle().fill(Color.blue.opacity(0.34)))
-                        .overlay(Circle().stroke(Color.white.opacity(0.62), lineWidth: 1))
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.25, blue: 0.25),
+                                         Color(red: 0.75, green: 0.1, blue: 0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .overlay(
                             Circle()
                                 .fill(
                                     RadialGradient(
-                                        colors: [Color.white.opacity(0.22), Color.clear],
+                                        colors: [Color.white.opacity(0.28), Color.clear],
                                         center: .topLeading,
-                                        startRadius: 16,
-                                        endRadius: 54
+                                        startRadius: 8,
+                                        endRadius: 52
                                     )
                                 )
                         )
+                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1))
+                } else {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.45, green: 0.72, blue: 1.0),
+                                         Color(red: 0.2, green: 0.52, blue: 1.0)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [Color.white.opacity(0.38), Color.clear],
+                                        center: .topLeading,
+                                        startRadius: 8,
+                                        endRadius: 52
+                                    )
+                                )
+                        )
+                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
                 }
 
                 Image(systemName: isRecording ? "waveform" : "mic.fill")
