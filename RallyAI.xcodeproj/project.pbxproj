@@ -24,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		9C344EDB2F3AB77B00F8FB13 /* RallyAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RallyAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C344EDB2F3AB77B00F8FB13 /* RallyTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RallyTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C344EE82F3AB77E00F8FB13 /* RallyAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RallyAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C344EF22F3AB77E00F8FB13 /* RallyAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RallyAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -85,7 +85,7 @@
 		9C344EDC2F3AB77B00F8FB13 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9C344EDB2F3AB77B00F8FB13 /* RallyAI.app */,
+				9C344EDB2F3AB77B00F8FB13 /* RallyTrack.app */,
 				9C344EE82F3AB77E00F8FB13 /* RallyAITests.xctest */,
 				9C344EF22F3AB77E00F8FB13 /* RallyAIUITests.xctest */,
 			);
@@ -114,7 +114,7 @@
 			packageProductDependencies = (
 			);
 			productName = RallyAI;
-			productReference = 9C344EDB2F3AB77B00F8FB13 /* RallyAI.app */;
+			productReference = 9C344EDB2F3AB77B00F8FB13 /* RallyTrack.app */;
 			productType = "com.apple.product-type.application";
 		};
 		9C344EE72F3AB77E00F8FB13 /* RallyAITests */ = {
@@ -395,6 +395,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27J2WAB6QA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RallyAI uses the microphone to capture verbal stat commands during games";
@@ -410,7 +411,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = name.ellie.winter.RallyAI;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = RallyTrack;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -428,6 +429,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27J2WAB6QA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RallyAI uses the microphone to capture verbal stat commands during games";
@@ -443,7 +445,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = name.ellie.winter.RallyAI;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = RallyTrack;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
