@@ -7,6 +7,7 @@ struct TrackingView: View {
     @State private var isComposerVisible = false
     @State private var draftCommand = ""
     @State private var isPulsing = false
+    @State private var isHolding = false
     @FocusState private var isCommandFieldFocused: Bool
 
     /// Tracks the score at which the set-win banner was last dismissed.
@@ -42,48 +43,61 @@ struct TrackingView: View {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 14) {
-                        scoreHeader
+                VStack(spacing: 0) {
+                    // Score header lives outside the ScrollView so swipe-to-adjust
+                    // gestures never compete with scrolling
+                    scoreHeader
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
 
-                        if vm.isActiveMatchCompleted {
-                            completedMatchBanner
-                        } else if showSetWinBanner {
-                            setWinBanner
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-
-                        if isViewingPastSet {
-                            HStack(spacing: 6) {
-                                Image(systemName: "clock")
-                                    .font(.caption2)
-                                Text("Viewing Set \(viewingSetNumber) — tap → to return to live")
-                                    .font(.caption)
+                    ScrollView {
+                        VStack(spacing: 14) {
+                            if voice.isRecording {
+                                recordingCard
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
                             }
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 6)
-                        }
 
-                        if commandsForCurrentSet.isEmpty {
-                            emptyState
-                        } else {
-                            ForEach(commandsForCurrentSet) { command in
-                                commandCard(command)
+                            if vm.isActiveMatchCompleted {
+                                completedMatchBanner
+                            } else if showSetWinBanner {
+                                setWinBanner
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+
+                            if isViewingPastSet {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock")
+                                        .font(.caption2)
+                                    Text("Viewing Set \(viewingSetNumber) — tap → to return to live")
+                                        .font(.caption)
+                                }
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 6)
+                            }
+
+                            if commandsForCurrentSet.isEmpty {
+                                emptyState
+                            } else {
+                                ForEach(commandsForCurrentSet) { command in
+                                    commandCard(command)
+                                }
                             }
                         }
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSetWinBanner)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 14)
+                        .padding(.bottom, 120)
                     }
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showSetWinBanner)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 120)
                 }
 
                 if !vm.isActiveMatchCompleted {
                     micButton
                         .padding(.bottom, 20)
                 }
+
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: voice.isRecording)
             .navigationTitle("Tracking")
             .safeAreaInset(edge: .bottom) {
                 Group {
@@ -109,15 +123,6 @@ struct TrackingView: View {
         }
         .onAppear {
             viewingSetNumber = vm.currentSetNumber
-            // Wire auto-submit: fires after 1.5 s of silence during voice recording
-            voice.onAutoSubmit = { text in
-                Task {
-                    vm.inputText = VoiceRecognitionManager.normalizeNumberWords(text)
-                    await vm.sendTextCommand()
-                    draftCommand = ""
-                    isComposerVisible = false
-                }
-            }
         }
         .onChange(of: vm.currentSetNumber) { _, newSetNumber in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -126,19 +131,15 @@ struct TrackingView: View {
         }
     }
 
-    // MARK: - Mic Button Action
+    // MARK: - Hold-to-Record
 
-    private func handleMicTap() {
-        // If already recording: stop (keep text so coach can review/edit before sending)
-        if voice.isRecording {
-            voice.stopRecording()
-            isCommandFieldFocused = true
-            return
-        }
+    private func handleHoldBegan() {
+        guard !isHolding else { return }
+        isHolding = true
 
         switch voice.permissionStatus {
         case .authorized:
-            isComposerVisible = true
+            // Recording card at top handles all visual feedback — no composer needed
             try? voice.startRecording()
 
         case .denied:
@@ -147,11 +148,10 @@ struct TrackingView: View {
             isCommandFieldFocused = true
 
         case .unknown:
-            // First time — request permissions then start if granted
+            // First hold ever — request permissions then start
             Task {
                 await voice.requestPermissions()
                 if voice.permissionStatus == .authorized {
-                    isComposerVisible = true
                     try? voice.startRecording()
                 } else {
                     isComposerVisible = true
@@ -159,6 +159,41 @@ struct TrackingView: View {
                 }
             }
         }
+    }
+
+    private func handleHoldEnded() {
+        guard isHolding else { return }
+        isHolding = false
+        guard voice.isRecording else { return }
+
+        voice.stopRecording()
+
+        let text = voice.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            isComposerVisible = false
+            return
+        }
+
+        // Split into individual commands on commas or "and", submit each separately
+        let commands = splitCommands(text)
+        Task {
+            for command in commands {
+                vm.inputText = VoiceRecognitionManager.normalizeNumberWords(command)
+                await vm.sendTextCommand()
+            }
+            draftCommand = ""
+        }
+    }
+
+    /// Splits a transcript into individual commands on natural spoken boundaries.
+    /// e.g. "7 ace, 4 kill" → ["7 ace", "4 kill"]
+    ///      "7 ace and 4 kill" → ["7 ace", "4 kill"]
+    private func splitCommands(_ text: String) -> [String] {
+        text
+            .components(separatedBy: ",")
+            .flatMap { $0.components(separatedBy: " and ") }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     // MARK: - Score Header
@@ -480,9 +515,7 @@ struct TrackingView: View {
     private var micButton: some View {
         let isRecording = voice.isRecording
 
-        return Button {
-            handleMicTap()
-        } label: {
+        return VStack(spacing: 10) {
             ZStack {
                 // Expanding ripple ring — only while recording
                 if isRecording {
@@ -533,76 +566,108 @@ struct TrackingView: View {
             )
             .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isRecording)
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in handleHoldBegan() }
+                    .onEnded   { _ in handleHoldEnded() }
+            )
+            .disabled(vm.isLoading)
+
+            HStack(spacing: 14) {
+                Text(isRecording ? "Release to send" : "Hold to record")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(isRecording ? .red : .secondary)
+
+                if !isRecording {
+                    Button {
+                        isComposerVisible = true
+                        isCommandFieldFocused = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "keyboard")
+                                .font(.caption)
+                            Text("Type")
+                                .font(.caption.weight(.medium))
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: isRecording)
         }
-        .disabled(vm.isLoading)
+    }
+
+    // MARK: - Recording Card
+
+    private var recordingCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 8, height: 8)
+                    .opacity(isPulsing ? 0.25 : 1.0)
+                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isPulsing)
+
+                Text("Recording…")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red)
+
+                Spacer()
+
+                Button("Cancel") {
+                    voice.cancelRecording()
+                    isHolding = false
+                    draftCommand = ""
+                }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+            }
+
+            Text(draftCommand.isEmpty ? "Speak your command…" : draftCommand)
+                .font(.title3.weight(.medium))
+                .foregroundStyle(draftCommand.isEmpty ? .tertiary : .primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(4)
+                .animation(.default, value: draftCommand)
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 6)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 
     // MARK: - Composer Bar
 
     private var composerBar: some View {
-        VStack(spacing: 0) {
-            // Recording status strip
-            if voice.isRecording {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 7, height: 7)
-                        .opacity(isPulsing ? 0.25 : 1.0)
-                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isPulsing)
-
-                    Text("Listening…")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.red)
-
-                    Spacer()
-
-                    Button("Cancel") {
-                        voice.cancelRecording()
-                        draftCommand = ""
-                        isComposerVisible = false
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
-            }
-
-            HStack(spacing: 10) {
-                TextField(
-                    voice.isRecording ? "Speak your command…" : "Type a command",
-                    text: $draftCommand
-                )
+        HStack(spacing: 10) {
+            TextField("Type a command", text: $draftCommand)
                 .textFieldStyle(.roundedBorder)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($isCommandFieldFocused)
-                // Field is read-only during recording; tap Stop to edit manually
-                .disabled(voice.isRecording)
 
-                if voice.isRecording {
-                    // Stop recording — keeps transcribed text for manual review/edit
-                    Button {
-                        voice.stopRecording()
-                        isCommandFieldFocused = true
-                    } label: {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.red)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Button("Send") {
-                        submitCommand()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(vm.isLoading || draftCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+            Button("Send") {
+                submitCommand()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .buttonStyle(.borderedProminent)
+            .disabled(vm.isLoading || draftCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            Button {
+                draftCommand = ""
+                isComposerVisible = false
+                isCommandFieldFocused = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(Color(.systemBackground))
     }
 

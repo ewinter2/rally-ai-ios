@@ -3,7 +3,7 @@ import Speech
 import AVFoundation
 
 /// Manages live speech recognition for voice command input.
-/// Transcribes audio in real-time and fires `onAutoSubmit` after 1.5 s of silence.
+/// Transcribes audio in real-time. Start/stop is controlled externally (e.g. press-and-hold).
 @MainActor
 final class VoiceRecognitionManager: ObservableObject {
 
@@ -19,18 +19,12 @@ final class VoiceRecognitionManager: ObservableObject {
     @Published var transcribedText  = ""
     @Published var permissionStatus: PermissionStatus = .unknown
 
-    // MARK: - Callbacks
-
-    /// Called automatically after 1.5 s of silence with the final transcribed text.
-    var onAutoSubmit: ((String) -> Void)?
-
     // MARK: - Private
 
     private let speechRecognizer    = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
     private var recognitionRequest  : SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask     : SFSpeechRecognitionTask?
     private let audioEngine         = AVAudioEngine()
-    private var silenceTimer        : Timer?
     private var tapInstalled        = false
 
     // MARK: - Init
@@ -100,7 +94,6 @@ final class VoiceRecognitionManager: ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self, self.isRecording else { return }
                     self.transcribedText = text
-                    self.scheduleAutoSubmit()
                 }
             }
 
@@ -125,10 +118,8 @@ final class VoiceRecognitionManager: ObservableObject {
         isRecording = true
     }
 
-    /// Stops recording cleanly. Transcribed text is preserved for manual review.
+    /// Stops recording cleanly. Transcribed text is preserved so the caller can submit it.
     func stopRecording() {
-        cancelSilenceTimer()
-
         if audioEngine.isRunning { audioEngine.stop() }
         if tapInstalled {
             audioEngine.inputNode.removeTap(onBus: 0)
@@ -149,28 +140,6 @@ final class VoiceRecognitionManager: ObservableObject {
     func cancelRecording() {
         stopRecording()
         transcribedText = ""
-    }
-
-    // MARK: - Auto Submit
-
-    private func scheduleAutoSubmit() {
-        cancelSilenceTimer()
-        guard !transcribedText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-
-        silenceTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor [weak self] in
-                guard let self, self.isRecording else { return }
-                let text = self.transcribedText
-                self.stopRecording()
-                self.onAutoSubmit?(text)
-            }
-        }
-    }
-
-    private func cancelSilenceTimer() {
-        silenceTimer?.invalidate()
-        silenceTimer = nil
     }
 
     // MARK: - Number Word Normalisation
