@@ -654,7 +654,7 @@ final class TrackingViewModel: ObservableObject {
         )
     }
 
-    private static func makeSession(
+    @MainActor private static func makeSession(
         matchName: String = "",
         ourTeamName: String = "",
         opponentName: String = "",
@@ -685,3 +685,4 @@ final class TrackingViewModel: ObservableObject {
         )
     }
 }
+

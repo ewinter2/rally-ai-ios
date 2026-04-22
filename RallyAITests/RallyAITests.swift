@@ -1,3 +1,3 @@
 import XCTest
-@testable import RallyAI
+@testable import RallyTrack
 
