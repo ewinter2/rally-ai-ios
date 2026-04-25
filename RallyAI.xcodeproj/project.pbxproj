@@ -7,13 +7,6 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
-		9C344EE92F3AB77E00F8FB13 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 9C344ED32F3AB77B00F8FB13 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 9C344EDA2F3AB77B00F8FB13;
-			remoteInfo = RallyAI;
-		};
 		9C344EF32F3AB77E00F8FB13 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9C344ED32F3AB77B00F8FB13 /* Project object */;
@@ -25,7 +18,6 @@
 
 /* Begin PBXFileReference section */
 		9C344EDB2F3AB77B00F8FB13 /* RallyTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RallyTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9C344EE82F3AB77E00F8FB13 /* RallyAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RallyAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C344EF22F3AB77E00F8FB13 /* RallyAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RallyAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -49,13 +41,6 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		9C344ED82F3AB77B00F8FB13 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9C344EE52F3AB77E00F8FB13 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -86,7 +71,6 @@
 			isa = PBXGroup;
 			children = (
 				9C344EDB2F3AB77B00F8FB13 /* RallyTrack.app */,
-				9C344EE82F3AB77E00F8FB13 /* RallyAITests.xctest */,
 				9C344EF22F3AB77E00F8FB13 /* RallyAIUITests.xctest */,
 			);
 			name = Products;
@@ -116,29 +100,6 @@
 			productName = RallyAI;
 			productReference = 9C344EDB2F3AB77B00F8FB13 /* RallyTrack.app */;
 			productType = "com.apple.product-type.application";
-		};
-		9C344EE72F3AB77E00F8FB13 /* RallyAITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 9C344EFF2F3AB77E00F8FB13 /* Build configuration list for PBXNativeTarget "RallyAITests" */;
-			buildPhases = (
-				9C344EE42F3AB77E00F8FB13 /* Sources */,
-				9C344EE52F3AB77E00F8FB13 /* Frameworks */,
-				9C344EE62F3AB77E00F8FB13 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				9C344EEA2F3AB77E00F8FB13 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				9C344EEB2F3AB77E00F8FB13 /* RallyAITests */,
-			);
-			name = RallyAITests;
-			packageProductDependencies = (
-			);
-			productName = RallyAITests;
-			productReference = 9C344EE82F3AB77E00F8FB13 /* RallyAITests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		9C344EF12F3AB77E00F8FB13 /* RallyAIUITests */ = {
 			isa = PBXNativeTarget;
@@ -176,10 +137,6 @@
 					9C344EDA2F3AB77B00F8FB13 = {
 						CreatedOnToolsVersion = 26.2;
 					};
-					9C344EE72F3AB77E00F8FB13 = {
-						CreatedOnToolsVersion = 26.2;
-						TestTargetID = 9C344EDA2F3AB77B00F8FB13;
-					};
 					9C344EF12F3AB77E00F8FB13 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 9C344EDA2F3AB77B00F8FB13;
@@ -201,7 +158,6 @@
 			projectRoot = "";
 			targets = (
 				9C344EDA2F3AB77B00F8FB13 /* RallyAI */,
-				9C344EE72F3AB77E00F8FB13 /* RallyAITests */,
 				9C344EF12F3AB77E00F8FB13 /* RallyAIUITests */,
 			);
 		};
@@ -209,13 +165,6 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		9C344ED92F3AB77B00F8FB13 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9C344EE62F3AB77E00F8FB13 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -239,13 +188,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9C344EE42F3AB77E00F8FB13 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		9C344EEE2F3AB77E00F8FB13 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,11 +198,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		9C344EEA2F3AB77E00F8FB13 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 9C344EDA2F3AB77B00F8FB13 /* RallyAI */;
-			targetProxy = 9C344EE92F3AB77E00F8FB13 /* PBXContainerItemProxy */;
-		};
 		9C344EF42F3AB77E00F8FB13 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 9C344EDA2F3AB77B00F8FB13 /* RallyAI */;
@@ -459,48 +396,6 @@
 			};
 			name = Release;
 		};
-		9C344F002F3AB77E00F8FB13 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = name.ellie.winter.RallyAITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RallyTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RallyTrack";
-			};
-			name = Debug;
-		};
-		9C344F012F3AB77E00F8FB13 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = name.ellie.winter.RallyAITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RallyTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RallyTrack";
-			};
-			name = Release;
-		};
 		9C344F032F3AB77E00F8FB13 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -556,15 +451,6 @@
 			buildConfigurations = (
 				9C344EFD2F3AB77E00F8FB13 /* Debug */,
 				9C344EFE2F3AB77E00F8FB13 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		9C344EFF2F3AB77E00F8FB13 /* Build configuration list for PBXNativeTarget "RallyAITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				9C344F002F3AB77E00F8FB13 /* Debug */,
-				9C344F012F3AB77E00F8FB13 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

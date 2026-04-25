@@ -243,6 +243,32 @@ final class TrackingViewModel: ObservableObject {
         Task { await persistState() }
     }
 
+    /// Confirms a `needsReview` command's parsed event and commits it to the game state.
+    /// The backend already produced a parse — the user is just signing off on it.
+    func acceptPendingReview(commandID: UUID) {
+        guard let index = commandQueue.firstIndex(where: { $0.id == commandID }) else { return }
+        guard commandQueue[index].status == .needsReview,
+              let parsed = commandQueue[index].parsedEvent else { return }
+        commitParsedEvent(parsed, forCommandAt: index)
+        Task { await persistState() }
+    }
+
+    /// True when there is at least one command whose event has been (or could be) committed.
+    var canUndoLastCommand: Bool {
+        commandQueue.contains {
+            $0.status == .committed || $0.status == .needsReview || $0.status == .accepted
+        }
+    }
+
+    /// Removes the most recently issued live command and its linked event.
+    /// Tap repeatedly to peel off multiple commands.
+    func undoLastCommand() {
+        guard let last = commandQueue.reversed().first(where: {
+            $0.status == .committed || $0.status == .needsReview || $0.status == .accepted
+        }) else { return }
+        removeCommand(id: last.id)
+    }
+
     func reparseAndReplaceEvent(id: UUID, newRawText: String) async {
         let trimmed = newRawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }

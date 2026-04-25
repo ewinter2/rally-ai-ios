@@ -50,6 +50,25 @@ struct TrackingView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
 
+                    // Quick undo for the most recent command. Hidden during press-and-hold
+                    // so it can't be hit accidentally while talking.
+                    if !voice.isRecording && !vm.isActiveMatchCompleted {
+                        HStack {
+                            Button {
+                                vm.undoLastCommand()
+                            } label: {
+                                Label("Undo last", systemImage: "arrow.uturn.backward")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(!vm.canUndoLastCommand)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                    }
+
                     ScrollView {
                         VStack(spacing: 14) {
                             if voice.isRecording {
@@ -171,6 +190,16 @@ struct TrackingView: View {
         let text = voice.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             isComposerVisible = false
+            return
+        }
+
+        // Pre-submit confidence gate: if the recogniser was uncertain, don't auto-send.
+        // Pre-fill the composer so the coach can correct the transcript before it commits.
+        let confidenceThreshold: Float = 0.5
+        if let conf = voice.lastAverageConfidence, conf < confidenceThreshold {
+            draftCommand = text
+            isComposerVisible = true
+            isCommandFieldFocused = true
             return
         }
 
@@ -499,6 +528,19 @@ struct TrackingView: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.plain)
+
+                    if command.status == .needsReview {
+                        Spacer()
+                        Button {
+                            vm.acceptPendingReview(commandID: command.id)
+                        } label: {
+                            Label("Accept", systemImage: "checkmark")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                        .controlSize(.small)
+                    }
                 }
                 .foregroundStyle(.secondary)
                 .font(.callout.weight(.medium))
@@ -666,29 +708,41 @@ struct TrackingView: View {
     // MARK: - Composer Bar
 
     private var composerBar: some View {
-        HStack(spacing: 10) {
-            TextField("Type a command", text: $draftCommand)
-                .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .focused($isCommandFieldFocused)
-
-            Button("Send") {
-                submitCommand()
+        VStack(alignment: .leading, spacing: 6) {
+            if let conf = voice.lastAverageConfidence, conf < 0.5 {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                    Text("Low confidence — please confirm before sending")
+                        .font(.caption)
+                }
+                .foregroundStyle(.orange)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(vm.isLoading || draftCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-            Button {
-                draftCommand = ""
-                isComposerVisible = false
-                isCommandFieldFocused = false
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                TextField("Type a command", text: $draftCommand)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($isCommandFieldFocused)
+
+                Button("Send") {
+                    submitCommand()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(vm.isLoading || draftCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                Button {
+                    draftCommand = ""
+                    isComposerVisible = false
+                    isCommandFieldFocused = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

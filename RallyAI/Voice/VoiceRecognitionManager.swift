@@ -18,6 +18,9 @@ final class VoiceRecognitionManager: ObservableObject {
     @Published var isRecording      = false
     @Published var transcribedText  = ""
     @Published var permissionStatus: PermissionStatus = .unknown
+    /// Average per-segment confidence from the most recent recognition (0–1).
+    /// `nil` means no confidence info was reported by the recognizer.
+    @Published var lastAverageConfidence: Float? = nil
 
     // MARK: - Private
 
@@ -86,6 +89,7 @@ final class VoiceRecognitionManager: ObservableObject {
         guard speechRecognizer?.isAvailable == true else { return }
 
         transcribedText = ""
+        lastAverageConfidence = nil
 
         // Configure audio session for recording
         let session = AVAudioSession.sharedInstance()
@@ -107,9 +111,11 @@ final class VoiceRecognitionManager: ObservableObject {
 
             if let result {
                 let text = result.bestTranscription.formattedString
+                let avg  = Self.averageConfidence(of: result.bestTranscription.segments.map { $0.confidence })
                 Task { @MainActor [weak self] in
                     guard let self, self.isRecording else { return }
                     self.transcribedText = text
+                    self.lastAverageConfidence = avg
                 }
             }
 
@@ -156,6 +162,17 @@ final class VoiceRecognitionManager: ObservableObject {
     func cancelRecording() {
         stopRecording()
         transcribedText = ""
+    }
+
+    // MARK: - Confidence
+
+    /// Averages per-segment confidence values, ignoring zeros (which mean "no info").
+    /// Returns `nil` if no segment reported a usable confidence — callers should treat
+    /// that as "submit anyway" rather than penalising the user.
+    static func averageConfidence(of values: [Float]) -> Float? {
+        let nonZero = values.filter { $0 > 0 }
+        guard !nonZero.isEmpty else { return nil }
+        return nonZero.reduce(0, +) / Float(nonZero.count)
     }
 
     // MARK: - Number Word Normalisation
