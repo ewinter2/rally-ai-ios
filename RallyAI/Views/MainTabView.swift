@@ -7,7 +7,7 @@ struct MainTabView: View {
         TabView {
             TrackingView()
                 .tabItem {
-                    Label("Tracking", systemImage: "sportscourt.fill")
+                    Label("Tracking", systemImage: "figure.volleyball")
                 }
 
             StatisticsView()

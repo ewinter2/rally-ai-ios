@@ -16,7 +16,7 @@ struct MatchListSheet: View {
                 if vm.savedMatches.isEmpty {
                     VStack(spacing: 12) {
                         Spacer()
-                        Image(systemName: "sportscourt")
+                        Image(systemName: "figure.volleyball")
                             .font(.system(size: 44))
                             .foregroundStyle(.tertiary)
                         Text("No saved games yet.")
